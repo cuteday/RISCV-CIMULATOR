@@ -1,5 +1,7 @@
-#include<stdio.h>
-#include<string.h>
+#include<cstdio>
+#include<cstring>
+#include<cassert>
+#include "utility.h"
 
 // 单独处理nop
 // 认为nop == addi x0 x0
@@ -44,14 +46,27 @@ typedef int16 Elf64_Half;
 #define	SHN_ABS 0xFFF1
 #define	SHN_COMMON 0xFFF2
 
+#define PT_NULL		0
+#define PT_LOAD		1
+#define PT_DYNAMIC	2
+#define PT_INTERP	3
+#define PT_NOTE		4
+#define PT_SHLIB	5
+#define PT_PHDR		6
+#define PT_TLS    	7
+#define PT_NUM    	8
+#define PT_LOOS   	0x60000000
+#define PT_HIOS   	0x6fffffff
+#define PT_LOPROC 	0x70000000
+#define PT_HIPROC	0x7fffffff
 
-typedef struct
+typedef struct	// File Header
 {
-	unsigned char e_ident[16]; /* ELF identification */
+	unsigned char e_ident[16]; /* ELF identification : Magic number and others */
 	Elf64_Half e_type; /* Object file type */
-	Elf64_Half e_machine; /* Machine type */
+	Elf64_Half e_machine; /* Machine type : Big/Little Endian? */
 	Elf64_Word e_version; /* Object file version */
-	Elf64_Addr e_entry; /* Entry point address */
+	Elf64_Addr e_entry; /* Entry point address : <_start> ☆-- */
 	Elf64_Off e_phoff; /* Program header offset */
 	Elf64_Off e_shoff; /* Section header offset */
 	Elf64_Word e_flags; /* Processor-specific flags */
@@ -63,9 +78,9 @@ typedef struct
 	Elf64_Half e_shstrndx; /* Section name string table index */
 } Elf64_Ehdr;
 
-typedef struct
+typedef struct	// Section Header in SH Table
 {
-	Elf64_Word sh_name; /* Section name */
+	Elf64_Word sh_name; /* Section name (offset in .shstrtab☆☆)*/
 	Elf64_Word sh_type; /* Section type */
 	Elf64_Xword sh_flags; /* Section attributes */
 	Elf64_Addr sh_addr; /* Virtual address in memory */
@@ -77,9 +92,9 @@ typedef struct
 	Elf64_Xword sh_entsize; /* Size of entries, if section has table */
 } Elf64_Shdr;
 
-typedef struct
+typedef struct	// Symbol in Symble Table
 {
-	Elf64_Word st_name; /* Symbol name */
+	Elf64_Word st_name; /* Symbol name (offset in .strtab☆☆)*/
 	unsigned char st_info; /* Type and Binding attributes */
 	unsigned char st_other; /* Reserved */
 	Elf64_Half st_shndx; /* Section table index */
@@ -88,7 +103,7 @@ typedef struct
 } Elf64_Sym;
 
 
-typedef struct
+typedef struct	// Program Header
 {
 	Elf64_Word p_type; /* Type of segment */
 	Elf64_Word p_flags; /* Segment attributes */
@@ -101,34 +116,52 @@ typedef struct
 } Elf64_Phdr;
 
 
-void read_elf();
-void read_Elf_header();
-void read_elf_sections();
-void read_symtable();
-void read_Phdr();
 
+class ElfReader{
+public:
+	ElfReader(char *filename, char* elfname = NULL);
+	void read_elf();
+	void read_Elf_header();
+	void read_elf_sections();
+	void read_symtable();
+	void read_Phdr();
 
-//代码段在解释文件中的偏移地址
-unsigned int cadr=0;
+	FILE *file;
+	FILE *elf;
+	Elf64_Ehdr elf64_hdr;
 
-//代码段的长度
-unsigned int csize=0;
+	char *section_name;	//	at Header String Table Index in ELF_HEADER
+	char *str_table;; //	at Section .strtab
 
-//代码段在内存中的虚拟地址
-unsigned int vadr=0;
+	//代码段在解释文件中的偏移地址
+	unsigned int cadr;
+	//代码段的长度
+	unsigned int csize;
+	//代码段在内存中的虚拟地址
+	unsigned int vadr;
+	//全局数据段在内存的地址
+	unsigned long long gp;
+	//main函数在内存中地址
+	unsigned int madr;
+	//程序结束时的PC
+	unsigned int endPC;
+	//程序的入口地址
+	unsigned int entry;
 
-//全局数据段在内存的地址
-unsigned long long gp=0;
-
-//main函数在内存中地址
-unsigned int madr=0;
-
-//程序结束时的PC
-unsigned int endPC=0;
-
-//程序的入口地址
-unsigned int entry=0;
-
-FILE *file=NULL;
-
-
+	//Program headers
+	ull padr;
+	unsigned int psize;
+	unsigned int pnum;
+	//Section Headers
+	ull sadr;
+	unsigned int ssize;
+	unsigned int snum;
+	//Symbol table
+	unsigned int symnum;
+	ull symadr;
+	unsigned int symsize;
+	//用于指示 包含节名称的字符串是第几个节（从零开始计数）
+	unsigned int index;
+	//字符串表在文件中地址，其内容包括.symtab和.debug节中的符号表
+	ull stradr;
+};

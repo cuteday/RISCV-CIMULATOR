@@ -1,40 +1,19 @@
 #include"Read_Elf.h"
 
-FILE *elf=NULL;
-Elf64_Ehdr elf64_hdr;
-
-//Program headers
-unsigned int padr=0;
-unsigned int psize=0;
-unsigned int pnum=0;
-
-//Section Headers
-unsigned int sadr=0;
-unsigned int ssize=0;
-unsigned int snum=0;
-
-//Symbol table
-unsigned int symnum=0;
-unsigned int symadr=0;
-unsigned int symsize=0;
-
-//用于指示 包含节名称的字符串是第几个节（从零开始计数）
-unsigned int index=0;
-
-//字符串表在文件中地址，其内容包括.symtab和.debug节中的符号表
-unsigned int stradr=0;
-
-
-bool open_file()
-{
-	return true;
+ElfReader::ElfReader(char* filename, char* elfname){
+	// print to stdout bu default
+	file = fopen(filename, "r");
+	if(elfname == NULL)
+		// elf = stdin;
+		elf = stdout;
+	else
+		elf = fopen(elfname, "rw");
+	assert(file != NULL);
+	assert(elf != NULL);
 }
 
-void read_elf()
+void ElfReader::read_elf()
 {
-	if(!open_file())
-		return ;
-
 	fprintf(elf,"ELF Header:\n");
 	read_Elf_header();
 
@@ -50,115 +29,116 @@ void read_elf()
 	fclose(elf);
 }
 
-void read_Elf_header()
+void ElfReader::read_Elf_header()
 {
 	//file should be relocated
-	fread(&elf64_hdr,1,sizeof(elf64_hdr),file);
-		
-	fprintf(elf," magic number:  ");
 
-	fprintf(elf," Class:  ELFCLASS32\n");
+	fread(&elf64_hdr,1,sizeof(elf64_hdr),file);
+
+	assert(*((uint*)elf64_hdr.e_ident) == 0x464c457f);	// secret code > <
+	assert(elf64_hdr.e_ident[4] == 2);					// only type elf64 supported
+	assert(elf64_hdr.e_ident[5] == 1);					// little endian
+
+	pnum = *(ushort *)&elf64_hdr.e_phnum;
+	padr = *(ull *)&elf64_hdr.e_phoff;
+	psize = *(ushort *)&elf64_hdr.e_phentsize;
+	snum = *(ushort *)&elf64_hdr.e_shnum;
+	sadr = *(ull *)&elf64_hdr.e_shoff;
+	ssize = *(ushort *)&elf64_hdr.e_shentsize;
+
+	fprintf(elf," magic number:  ");
+	for (int i = 0; i < 16;i++)
+		fprintf(elf, "%02x ", elf64_hdr.e_ident[i]);
+	
+	fprintf(elf, "\n Class:  ELFCLASS64\n");
 	
 	fprintf(elf," Data:  little-endian\n");
-		
-	fprintf(elf," Version:   \n");
-
+	fprintf(elf," Version:  %d \n", elf64_hdr.e_ident[6]);
 	fprintf(elf," OS/ABI:	 System V ABI\n");
+	fprintf(elf," ABI Version:  %d \n", elf64_hdr.e_ident[8]);
 	
-	fprintf(elf," ABI Version:   \n");
-	
-	fprintf(elf," Type:  ");
-	
-	fprintf(elf," Machine:   \n");
+	fprintf(elf," Type: 0x%08x ", *(uint*)&elf64_hdr.e_type);
+	fprintf(elf, " Machine:  %d \n", *(uint*)&elf64_hdr.e_machine);
+	fprintf(elf," Version: 0x%x \n", *(uint*)&elf64_hdr.e_version);
+	fprintf(elf," Entry point address:  0x%x\n", *(uint*)&elf64_hdr.e_entry);
 
-	fprintf(elf," Version:  \n");
+	fprintf(elf, " Start of program headers:  %lld  bytes into  file\n", padr);
+	fprintf(elf, " Start of section headers:  %lld  bytes into  file\n", sadr);
 
-	fprintf(elf," Entry point address:  0x%x\n");
+	fprintf(elf," Flags:  0x%08x\n", *(uint*)&elf64_hdr.e_flags);
+	fprintf(elf," Size of this header: %u Bytes\n", *(ushort*)&elf64_hdr.e_ehsize);
+	fprintf(elf," Size of program headers: %u Bytes\n", psize);
+	fprintf(elf," Number of program headers: %u \n", pnum);
+	fprintf(elf, " Size of section headers: %u Bytes\n", ssize);
+	fprintf(elf," Number of section headers: %u \n", snum);
+	fprintf(elf, " Section header string table index: %u \n", *(ushort*)&elf64_hdr.e_shstrndx);
 
-	fprintf(elf," Start of program headers:    bytes into  file\n");
-
-	fprintf(elf," Start of section headers:    bytes into  file\n");
-
-	fprintf(elf," Flags:  0x%x\n");
-
-	fprintf(elf," Size of this header:   Bytes\n");
-
-	fprintf(elf," Size of program headers:   Bytes\n");
-
-	fprintf(elf," Number of program headers:   \n");
-
-	fprintf(elf," Size of section headers:    Bytes\n");
-
-	fprintf(elf," Number of section headers:  \n");
-
-	fprintf(elf," Section header string table index:   \n");
 }
 
-void read_elf_sections()
+void ElfReader::read_elf_sections()
 {
-
 	Elf64_Shdr elf64_shdr;
-
-	for(int c=0;c<snum;c++)
-	{
+	fseek(file, sadr + *(uint*)&elf64_hdr.e_shstrndx * sizeof(Elf64_Shdr), 0);
+	fread(&elf64_shdr, 1, sizeof(Elf64_Shdr), file);
+	section_name = new char[*(ull *)&elf64_shdr.sh_size + 1];
+	fseek(file, *(ull *)&elf64_shdr.sh_offset, 0);
+	fread(section_name, 1, *(ull *)&elf64_shdr.sh_size, file);
+	// read the header string table into memory...
+	fseek(file, sadr, 0);
+	
+	for(int c=0;c<snum;c++){
 		fprintf(elf," [%3d]\n",c);
 		
 		//file should be relocated
 		fread(&elf64_shdr,1,sizeof(elf64_shdr),file);
 
 		fprintf(elf," Name: ");
-
-		fprintf(elf," Type: ");
-
-		fprintf(elf," Address:  ");
-
-		fprintf(elf," Offest:  \n");
-
-		fprintf(elf," Size:  ");
-
-		fprintf(elf," Entsize:  ");
-
-		fprintf(elf," Flags:   ");
-		
-		fprintf(elf," Link:  ");
-
-		fprintf(elf," Info:  ");
-
-		fprintf(elf," Align: \n");
+		fprintf(elf," Type: %u", *(uint*)&elf64_shdr.sh_flags);
+        fprintf(elf,"  Address: %016llx", *(ull*)&elf64_shdr.sh_addr);
+        fprintf(elf,"  Offest: %016llx\n", *(ull*)&elf64_shdr.sh_offset);
+        fprintf(elf,"  Size: %016llx", *(ull*)&elf64_shdr.sh_size);
+        fprintf(elf,"  Entsize: %016llx", *(ull*)&elf64_shdr.sh_entsize);
+        fprintf(elf,"  Link: %u", *(uint*)&elf64_shdr.sh_link);
+        fprintf(elf,"  Info: %u", *(uint*)&elf64_shdr.sh_info);
+        fprintf(elf,"  Align: %llu\n", *(ull*)&elf64_shdr.sh_addralign);
 
  	}
 }
 
-void read_Phdr()
+void ElfReader::read_Phdr()
 {
+	fseek(file, padr, 0);
 	Elf64_Phdr elf64_phdr;
-	for(int c=0;c<pnum;c++)
-	{
+	for(int c=0;c<pnum;c++){
 		fprintf(elf," [%3d]\n",c);
 			
 		//file should be relocated
 		fread(&elf64_phdr,1,sizeof(elf64_phdr),file);
 
-		fprintf(elf," Type:   ");
-		
-		fprintf(elf," Flags:   ");
-		
-		fprintf(elf," Offset:   ");
-		
-		fprintf(elf," VirtAddr:  ");
-		
-		fprintf(elf," PhysAddr:   ");
+		fprintf(elf," Type: %d ",*(uint*)&elf64_phdr.p_type);
+		fprintf(elf," Flags: 0x%08x ", *(uint*)&elf64_phdr.p_flags);
+		fprintf(elf," Offset: 0x%016llx", *(ull*)&elf64_phdr.p_offset);
+        fprintf(elf," VirtAddr: 0x%016llx", *(ull*)&elf64_phdr.p_vaddr);
+        fprintf(elf," PhysAddr: 0x%016llx\n", *(ull*)&elf64_phdr.p_paddr);
+        fprintf(elf," FileSiz: 0x%016llx", *(ull*)&elf64_phdr.p_filesz);
+        fprintf(elf," MemSiz: 0x%016llx", *(ull*)&elf64_phdr.p_memsz);
+		fprintf(elf," Align: 0x%llx\n", *(ull*)&elf64_phdr.p_align);
 
-		fprintf(elf," FileSiz:   ");
-
-		fprintf(elf," MemSiz:   ");
-		
-		fprintf(elf," Align:   ");
+		if (*(uint*)&elf64_phdr.p_flags == 0x05 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
+            cadr = *(ull*)&elf64_phdr.p_offset;
+            csize = *(ull*)&elf64_phdr.p_filesz;
+            vadr = *(ull*)&elf64_phdr.p_vaddr;
+        }
+		if (*(uint*)&elf64_phdr.p_flags == 0x06 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
+            //dadr = *(ull*)&elf64_phdr.p_offset;
+            //dsize = *(ull*)&elf64_phdr.p_filesz;
+            gp = *(ull*)&elf64_phdr.p_vaddr;
+        }
 	}
 }
 
 
-void read_symtable()
+void ElfReader::read_symtable()
 {
 	Elf64_Sym elf64_sym;
 	for(int c=0;c<symnum;c++)
@@ -168,20 +148,14 @@ void read_symtable()
 		//file should be relocated
 		fread(&elf64_sym,1,sizeof(elf64_sym),file);
 
-		fprintf(elf," Name:  %40s   ");
-
-		fprintf(elf," Bind:   ");
-		
-		fprintf(elf," Type:   ");
-		
-		fprintf(elf," NDX:   ");
-		
-		fprintf(elf," Size:   ");
-
-		fprintf(elf," Value:   \n");
+		fprintf(elf," Name:     ");
+		fprintf(elf," Bind: %d ", *(uint*)&elf64_sym.st_info>>4);
+		fprintf(elf," Type: %d ", *(uint*)&elf64_sym.st_info&0xf);
+		fprintf(elf,"  NDX: %-4hu", *(ushort*)&elf64_sym.st_shndx);
+        fprintf(elf,"  Size: %-16llu", *(ull*)&elf64_sym.st_size);
+        fprintf(elf,"  Value: %016llx\n", *(ull*)&elf64_sym.st_value);
 
 	}
-
 }
 
 

@@ -1,87 +1,80 @@
 #include "Simulation.h"
 using namespace std;
 
-extern void read_elf();
-extern unsigned int cadr;
-extern unsigned int csize;
-extern unsigned int vadr;
-extern unsigned long long gp;
-extern unsigned int madr;
-extern unsigned int endPC;
-extern unsigned int entry;
-extern FILE *file;
+Simulator::Simulator(char* filename){
 
-
-//指令运行数
-long long inst_num=0;
-
-//系统调用退出指示
-int exit_flag=0;
-
-//加载代码段
-//初始化PC
-void load_memory(){
-	fseek(file,cadr,SEEK_SET);
-	fread(&memory[vadr>>2],1,csize,file);
-
-	vadr=vadr>>2;
-	csize=csize>>2;
-	fclose(file);
 }
 
-int main()
-{
-	//解析elf文件
-	read_elf();
-	
-	//加载内存
-	load_memory();
-
-	//设置入口地址
-	PC=entry>>2;
-	
-	//设置全局数据段地址寄存器
-	reg[3]=gp;
-	
-	reg[2]=MAX/2;//栈基址 （sp寄存器）
-
-	simulate();
-
-	cout <<"simulate over!"<<endl;
-
+int Simulator::ext_signed(unsigned int src, int bit){
+	return 0;
+}
+//获取指定位
+unsigned int Simulator::getbit(int s, int e){
+	return 0;
+}
+unsigned int Simulator::getbit(unsigned inst, int s, int e){
 	return 0;
 }
 
-void simulate()
-{
-	//结束PC的设置
-	int end=(int)endPC/4-1;
-	while(PC!=end)
-	{
-		//运行
-		IF();
-		ID();
-		EX();
-		MEM();
-		WB();
+//加载代码段
+//初始化PC
+void Simulator::load_memory(){
 
-		//更新中间寄存器
-		IF_ID=IF_ID_old;
-		ID_EX=ID_EX_old;
-		EX_MEM=EX_MEM_old;
-		MEM_WB=MEM_WB_old;
-
-        if(exit_flag==1)
-            break;
-
-        reg[0]=0;//一直为零
-
-	}
 }
+
+// int main()
+// {
+// 	//解析elf文件
+// 	read_elf();
+	
+// 	//加载内存
+// 	load_memory();
+
+// 	//设置入口地址
+// 	PC=entry>>2;
+	
+// 	//设置全局数据段地址寄存器
+// 	reg[3]=gp;
+	
+// 	reg[2]=MAX/2;//栈基址 （sp寄存器）
+
+// 	simulate();
+
+// 	cout <<"simulate over!"<<endl;
+
+// 	return 0;
+// }
+
+// void Simulator::simulate()
+// {
+// 	//结束PC的设置
+// 	int end=(int)endPC/4-1;
+// 	while(PC!=end)
+// 	{
+// 		//运行
+// 		IF();
+// 		ID();
+// 		EX();
+// 		MEM();
+// 		WB();
+
+// 		//更新中间寄存器
+// 		IF_ID=IF_ID_old;
+// 		ID_EX=ID_EX_old;
+// 		EX_MEM=EX_MEM_old;
+// 		MEM_WB=MEM_WB_old;
+
+//         if(exit_flag==1)
+//             break;
+
+//         reg[0]=0;//一直为零
+
+// 	}
+// }
 
 
 //取指令
-void IF()
+void Simulator::IF()
 {
 	//write IF_ID_old
 	IF_ID_old.inst=memory[PC];
@@ -90,7 +83,7 @@ void IF()
 }
 
 //译码
-void ID()
+void Simulator::ID()
 {
 	//Read IF_ID
 	unsigned int inst=IF_ID.inst;
@@ -190,7 +183,7 @@ void ID()
 }
 
 //执行
-void EX()
+void Simulator::EX()
 {
 	//read ID_EX
 	int temp_PC=ID_EX.PC;
@@ -228,7 +221,7 @@ void EX()
 }
 
 //访问存储器
-void MEM()
+void Simulator::MEM()
 {
 	//read EX_MEM
 
@@ -241,7 +234,7 @@ void MEM()
 
 
 //写回
-void WB()
+void Simulator::WB()
 {
 	//read MEM_WB
 
