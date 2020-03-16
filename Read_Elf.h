@@ -131,14 +131,14 @@ public:
 	Elf64_Ehdr elf64_hdr;
 
 	char *section_name;	//	at Header String Table Index in ELF_HEADER
-	char *str_table;; //	at Section .strtab
+	char *str_table;; 	//	at Section .strtab
 
 	//代码段在解释文件中的偏移地址
 	unsigned int cadr;
 	//代码段的长度
 	unsigned int csize;
 	//代码段在内存中的虚拟地址
-	unsigned int vadr;
+	unsigned int cvadr;
 	//全局数据段在内存的地址
 	unsigned long long gp;
 	//main函数在内存中地址
@@ -147,6 +147,11 @@ public:
 	unsigned int endPC;
 	//程序的入口地址
 	unsigned int entry;
+
+	unsigned int dadr;
+	unsigned int dsize;
+	unsigned int dvadr;
+
 
 	//Program headers
 	ull padr;
@@ -164,4 +169,5 @@ public:
 	unsigned int index;
 	//字符串表在文件中地址，其内容包括.symtab和.debug节中的符号表
 	ull stradr;
+	unsigned int strsize;
 };

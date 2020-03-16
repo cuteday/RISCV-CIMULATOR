@@ -43,6 +43,9 @@
 #define MAX 100000000
 
 class Simulator{
+public:
+    ElfReader *elf; // 可执行文件解析
+
 
     //主存
     unsigned int memory[MAX];
@@ -66,21 +69,22 @@ class Simulator{
     //系统调用退出指示
     int exit_flag;
 
+    // 流水线寄存器们
+    IF_ID IFID, IFID_;
+    ID_EX IDEX, IDEX_;
+    EX_MEM EXMEM, EXMEM_;
+    MEM_WB MEMWB, MEMWB_;
+
     Simulator(char* filename);
 
     //加载内存
     void load_memory();
-
     void simulate();
 
     void IF();
-
     void ID();
-
     void EX();
-
     void MEM();
-
     void WB();
 
     //符号扩展

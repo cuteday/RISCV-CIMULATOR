@@ -1,12 +1,15 @@
 #include "Simulation.h"
 using namespace std;
 
-Simulator::Simulator(char* filename){
 
+
+Simulator::Simulator(char* filename){
+	memset(this, 0, sizeof(Simulator));
+	elf = new ElfReader(filename, NULL);
 }
 
 int Simulator::ext_signed(unsigned int src, int bit){
-	return 0;
+	return 0; 
 }
 //获取指定位
 unsigned int Simulator::getbit(int s, int e){
@@ -16,77 +19,65 @@ unsigned int Simulator::getbit(unsigned inst, int s, int e){
 	return 0;
 }
 
-//加载代码段
-//初始化PC
-void Simulator::load_memory(){
 
+void Simulator::load_memory(){
+	// Load code segment
+	fseek(elf->file, elf->cadr, 0);
+	fread(memory + elf->cvadr, 1, elf->csize, elf->file);
+	// Load data segment
+	fseek(elf->file, elf->dadr, 0);
+	fread(memory + elf->dvadr, 1, elf->dsize, elf->file);
+
+	//设置入口地址
+	PC=elf->entry>>2;
+	//设置全局数据段地址寄存器
+	reg[3]=elf->gp;
+	reg[2]=MAX/2;//栈基址 （sp寄存器）
 }
 
-// int main()
-// {
-// 	//解析elf文件
-// 	read_elf();
-	
-// 	//加载内存
-// 	load_memory();
 
-// 	//设置入口地址
-// 	PC=entry>>2;
-	
-// 	//设置全局数据段地址寄存器
-// 	reg[3]=gp;
-	
-// 	reg[2]=MAX/2;//栈基址 （sp寄存器）
 
-// 	simulate();
+void Simulator::simulate()
+{
+	//结束PC的设置
+	int end=(int)elf->endPC/4-1;
+	while(PC!=end)
+	{
+		//运行
+		IF();
+		ID();
+		EX();
+		MEM();
+		WB();
 
-// 	cout <<"simulate over!"<<endl;
+		//更新中间寄存器
+		IFID=IFID_;
+		IDEX=IDEX_;
+		EXMEM=EXMEM_;
+		MEMWB=MEMWB_;
 
-// 	return 0;
-// }
+        if(exit_flag==1)
+            break;
 
-// void Simulator::simulate()
-// {
-// 	//结束PC的设置
-// 	int end=(int)endPC/4-1;
-// 	while(PC!=end)
-// 	{
-// 		//运行
-// 		IF();
-// 		ID();
-// 		EX();
-// 		MEM();
-// 		WB();
-
-// 		//更新中间寄存器
-// 		IF_ID=IF_ID_old;
-// 		ID_EX=ID_EX_old;
-// 		EX_MEM=EX_MEM_old;
-// 		MEM_WB=MEM_WB_old;
-
-//         if(exit_flag==1)
-//             break;
-
-//         reg[0]=0;//一直为零
-
-// 	}
-// }
-
+        reg[0]=0;//一直为零
+	}
+}
 
 //取指令
 void Simulator::IF()
 {
-	//write IF_ID_old
-	IF_ID_old.inst=memory[PC];
+	//write IFID_
+	IFID_.inst=memory[PC];
+
 	PC=PC+1;
-	IF_ID_old.PC=PC;
+	IFID_.PC=PC;	// 前传更新后的PC (PC+1)
 }
 
 //译码
 void Simulator::ID()
 {
-	//Read IF_ID
-	unsigned int inst=IF_ID.inst;
+	//Read IFID
+	unsigned int inst=IFID.inst;
 	int EXTop=0;
 	unsigned int EXTsrc=0;
 
@@ -155,7 +146,7 @@ void Simulator::ID()
     {
         if(fuc3==F3_BEQ)
         {
-			
+			  
         }
         else
         {
@@ -171,13 +162,13 @@ void Simulator::ID()
 		
     }
 
-	//write ID_EX_old
-	ID_EX_old.Rd=rd;
-	ID_EX_old.Rt=rt;
-	ID_EX_old.Imm=ext_signed(EXTsrc,EXTop);
+	//write IDEX_
+	IDEX_.Rd=rd;
+	IDEX_.Rt=rt;
+	IDEX_.Imm=ext_signed(EXTsrc,EXTop);
 	//...
 
-	ID_EX_old.Ctrl_EX_ALUOp=ALUop;
+	IDEX_.Ctrl_EX_ALUOp=ALUop;
 	//....
 
 }
@@ -185,10 +176,10 @@ void Simulator::ID()
 //执行
 void Simulator::EX()
 {
-	//read ID_EX
-	int temp_PC=ID_EX.PC;
-	char RegDst=ID_EX.Ctrl_EX_RegDst;
-	char ALUOp=ID_EX.Ctrl_EX_ALUOp;
+	//read IDEX
+	int temp_PC=IDEX.PC;
+	char RegDst=IDEX.Ctrl_EX_RegDst;
+	char ALUOp=IDEX.Ctrl_EX_ALUOp;
 
 	//Branch PC calulate
 	//...
@@ -214,29 +205,29 @@ void Simulator::EX()
 
 	}
 
-	//write EX_MEM_old
-	EX_MEM_old.ALU_out=ALUout;
-	EX_MEM_old.PC=temp_PC;
+	//write EXMEM_
+	EXMEM_.ALU_out=ALUout;
+	EXMEM_.PC=temp_PC;
     //.....
 }
 
 //访问存储器
 void Simulator::MEM()
 {
-	//read EX_MEM
+	//read EXMEM
 
 	//complete Branch instruction PC change
 
 	//read / write memory
 
-	//write MEM_WB_old
+	//write MEMWB_
 }
 
 
 //写回
 void Simulator::WB()
 {
-	//read MEM_WB
+	//read MEMWB
 
 	//write reg
 }

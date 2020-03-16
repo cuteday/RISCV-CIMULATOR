@@ -24,6 +24,7 @@ O_FILES = main.o Read_Elf.o Simulation.o utility.o
 
 $(EXEC): $(O_FILES)
 	$(CC) $(CFLAGS) -o $(EXEC) $(O_FILES)
+	# rm $(O_FILES)
 
 main.o:	./Read_Elf.h \
 		$(H_COMMON)
@@ -37,5 +38,6 @@ Read_Elf.o: ./Read_Elf.h \
 
 utility.o: $(H_COMMON)
 
+.PHONY: clean
 clean: 
 	rm $(O_FILES) $(EXEC)
