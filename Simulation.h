@@ -7,6 +7,19 @@
 #include <cstdlib>
 #include "Reg_def.h"
 #include "Read_Elf.h"
+#include "Instruction.h"
+
+// 课堂摸鱼笔记
+// 多周期数据通路 Cycle数?
+// 根据Opcode 定义不同的周期
+// 改起来很方便~~! @模拟器的优势
+// 但是多周期流水线呢？ 同一时间，对应不同的执行空间...
+// 导致Cycle增加的? Cache miss、 Data Header、Control Harzard 补偿一下
+// 
+// 流水线的Step?
+// 时钟周期意义上 或指令阶段的意义上...
+// 如何处理系统调用?
+// 使用内联汇编改写系统调用
 
 #define OP_JAL 111 // OPCODE UJ    0x6f
 #define OP_R 51    // OPCODE REG   0x33

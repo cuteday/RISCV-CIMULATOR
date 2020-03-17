@@ -1,3 +1,7 @@
+#ifndef DEFS
+#define DEFS
+#include "Utility.h"
+
 typedef unsigned long long REG;
 
 // 流水线寄存器 * 4
@@ -12,6 +16,7 @@ struct ID_EX{
 	int PC;
 	int Imm;			// 立即数内容
 	REG Reg_Rs,Reg_Rt;	// 操作数寄存器内容
+	OP_NAME inst;		// 投机取巧的实际指令!
 
 	// control bit * 8
 	char Ctrl_EX_ALUSrc;
@@ -51,3 +56,5 @@ struct MEM_WB{
 	char Ctrl_WB_RegWrite;
 	char Ctrl_WB_MemtoReg;
 };
+
+#endif

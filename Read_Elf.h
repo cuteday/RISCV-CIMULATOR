@@ -1,7 +1,7 @@
 #include<cstdio>
 #include<cstring>
 #include<cassert>
-#include "utility.h"
+#include "Utility.h"
 
 // 单独处理nop
 // 认为nop == addi x0 x0

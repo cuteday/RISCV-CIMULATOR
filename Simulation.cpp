@@ -1,8 +1,6 @@
 #include "Simulation.h"
 using namespace std;
 
-
-
 Simulator::Simulator(char* filename){
 	memset(this, 0, sizeof(Simulator));
 	elf = new ElfReader(filename, NULL);
@@ -15,12 +13,18 @@ int Simulator::ext_signed(unsigned int src, int bit){
 unsigned int Simulator::getbit(int s, int e){
 	return 0;
 }
-unsigned int Simulator::getbit(unsigned inst, int s, int e){
-	return 0;
+unsigned int Simulator::getbit(unsigned int inst, int s, int e){
+	assert(s < 32 && e < 32);
+	unsigned int l, r;
+	l = (1 << s) - 1;
+	r = (1 << e) - 1;
+	r += 1 << e;
+	return (inst & (l ^ r)) >> s;
 }
 
 
 void Simulator::load_memory(){
+	// 没错 就是简单的线性映射(转换？)
 	// Load code segment
 	fseek(elf->file, elf->cadr, 0);
 	fread(memory + elf->cvadr, 1, elf->csize, elf->file);
@@ -36,14 +40,14 @@ void Simulator::load_memory(){
 }
 
 
-
 void Simulator::simulate()
 {
 	//结束PC的设置
 	int end=(int)elf->endPC/4-1;
 	while(PC!=end)
 	{
-		//运行
+		// 运行
+		// 倒着执行?
 		IF();
 		ID();
 		EX();
@@ -73,110 +77,10 @@ void Simulator::IF()
 	IFID_.PC=PC;	// 前传更新后的PC (PC+1)
 }
 
-//译码
-void Simulator::ID()
-{
-	//Read IFID
-	unsigned int inst=IFID.inst;
-	int EXTop=0;
-	unsigned int EXTsrc=0;
-
-	char RegDst,ALUop,ALUSrc;
-	char Branch,MemRead,MemWrite;
-	char RegWrite,MemtoReg;
-
-	rd=getbit(inst,7,11);
-	fuc3=getbit(inst,0,0);
-	//....
-
-
-	if(OP==OP_R)
-	{
-		if(fuc3==F3_ADD&&fuc7==F7_ADD)
-		{
-            EXTop=0;
-			RegDst=0;
-			ALUop=0;
-			ALUSrc=0;
-			Branch=0;
-			MemRead=0;
-			MemWrite=0;
-			RegWrite=0;
-			MemtoReg=0;
-		}
-		else
-		{
-		   
-		}
-	}
-	else if(OP==OP_I)
-    {
-        if(fuc3==F3_ADDI)
-        {
-            
-        }
-        else
-        {
-           
-        }
-    }
-    else if(OP==OP_SW)
-    {
-        if(fuc3==F3_SB)
-        {
-           
-        }
-        else
-        {
-           
-        }
-    }
-    else if(OP==OP_LW)
-    {
-        if(fuc3==F3_LB)
-        {
-			
-        }
-        else
-        {
-
-        }
-    }
-    else if(OP==OP_BEQ)
-    {
-        if(fuc3==F3_BEQ)
-        {
-			  
-        }
-        else
-        {
-           
-        }
-    }
-    else if(OP==OP_JAL)
-    {
-        
-    }
-    else
-    {
-		
-    }
-
-	//write IDEX_
-	IDEX_.Rd=rd;
-	IDEX_.Rt=rt;
-	IDEX_.Imm=ext_signed(EXTsrc,EXTop);
-	//...
-
-	IDEX_.Ctrl_EX_ALUOp=ALUop;
-	//....
-
-}
-
 //执行
 void Simulator::EX()
 {
-	//read IDEX
+	//read ID_EX
 	int temp_PC=IDEX.PC;
 	char RegDst=IDEX.Ctrl_EX_RegDst;
 	char ALUOp=IDEX.Ctrl_EX_ALUOp;
@@ -205,11 +109,12 @@ void Simulator::EX()
 
 	}
 
-	//write EXMEM_
+	//write EX_MEM_old
 	EXMEM_.ALU_out=ALUout;
 	EXMEM_.PC=temp_PC;
     //.....
 }
+
 
 //访问存储器
 void Simulator::MEM()
