@@ -10,9 +10,6 @@ int Simulator::ext_signed(unsigned int src, int bit){
 	return 0; 
 }
 //获取指定位
-unsigned int Simulator::getbit(int s, int e){
-	return 0;
-}
 unsigned int Simulator::getbit(unsigned int inst, int s, int e){
 	assert(s < 32 && e < 32);
 	unsigned int l, r;
@@ -21,7 +18,6 @@ unsigned int Simulator::getbit(unsigned int inst, int s, int e){
 	r += 1 << e;
 	return (inst & (l ^ r)) >> s;
 }
-
 
 void Simulator::load_memory(){
 	// 没错 就是简单的线性映射(转换？)
@@ -47,7 +43,7 @@ void Simulator::simulate()
 	while(PC!=end)
 	{
 		// 运行
-		// 倒着执行?
+		// 倒着执行? nonono
 		IF();
 		ID();
 		EX();
@@ -81,38 +77,122 @@ void Simulator::IF()
 void Simulator::EX()
 {
 	//read ID_EX
+	OP_NAME op_name = IDEX.inst;
 	int temp_PC=IDEX.PC;
+
 	char RegDst=IDEX.Ctrl_EX_RegDst;
-	char ALUOp=IDEX.Ctrl_EX_ALUOp;
+	char RegWrite = IDEX.Ctrl_WB_RegWrite;
+	int Imm = IDEX.Imm;
+	REG_SIGNED inp1, inp2;
 
 	//Branch PC calulate
 	//...
 
 	//choose ALU input number
-	//...
+	inp1 = IDEX.Reg_Rs;
+	inp2 = IDEX.Ctrl_EX_ALUSrc ? Imm : IDEX.Reg_Rt;
 
 	//alu calculate
 	int Zero;
 	REG ALUout;
-	switch(ALUOp){
-	default:;
+	// switch(ALUOp){
+	// default:;
+	// }
+
+	switch(op_name){
+		case OP_ADD:
+		case OP_ADDI:
+			ALUout = inp1 + inp2;
+			break;
+		case OP_MUL:
+			ALUout = inp1 * inp2;
+			break;
+		case OP_SUB:
+			ALUout = inp1 - inp2;
+			break;	
+		case OP_SLL:
+		case OP_SLLI:
+			ALUout = inp1 << (inp2 & 0x3f);
+			break;
+		case OP_MULH:
+			ALUout = calc_mulh(inp1, inp2);
+			break;
+		case OP_SLT:
+		case OP_SLTI:
+			ALUout = inp1 < inp2;
+			break;
+		case OP_XOR:
+		case OP_XORI:
+			ALUout = inp1 ^ inp2;
+			break;
+		case OP_DIV:
+			ALUout = inp1 / inp2;
+			break;
+		case OP_SRL:	// logical shift
+		case OP_SRLI:
+			ALUout = REG(inp1) >> (inp2 & 0x3f);
+			break;
+		case OP_SRA:	// algorimetic shift
+		case OP_SRAI:
+			ALUout = inp1 >> (inp2 & 0x3f);
+			break;
+		case OP_OR:		// 奥里小精灵♪
+		case OP_ORI:
+			ALUout = inp1 | inp2;
+			break;
+		case OP_REM:
+			ALUout = inp1 % inp2;
+			break;
+		case OP_AND:
+		case OP_ANDI:
+			ALUout = inp1 & inp2;
+			break;
+		// R series and some I insts end here...
+
+		case OP_ADDIW:
+			ALUout = REG_SIGNED(int(inp1 + inp2));
+			break;
+
+		case OP_LB:		
+		case OP_LH:
+		case OP_LW:
+		case OP_LD:
+		case OP_SB:
+		case OP_SH:
+		case OP_SW:
+		case OP_SD:
+			// mem length assigned when decode 
+			ALUout = inp1 + inp2;
+			break;
+
+		case OP_LUI:
+			ALUout = inp2 << 12;
+			break;
+
+		default:
+			fprintf(stderr, "这个错误本不该出现的...\n");
+			assert(op_name != OP_INVALID);
+			assert(false);
 	}
 
 	//choose reg dst address
-	int Reg_Dst;
-	if(RegDst)
-	{
-
-	}
-	else
-	{
+	if(RegDst){		// not reg $0
 
 	}
 
-	//write EX_MEM_old
+	//write EXMEM_
 	EXMEM_.ALU_out=ALUout;
 	EXMEM_.PC=temp_PC;
-    //.....
+	EXMEM_.Reg_dst = RegDst;
+	EXMEM_.Zero = !ALUout;
+	EXMEM_.Reg_Rt = IDEX.Reg_Rt;
+
+	EXMEM_.Ctrl_M_MemRead = IDEX.Ctrl_M_MemRead;
+	EXMEM_.Ctrl_M_MemWrite = IDEX.Ctrl_M_MemWrite;
+	EXMEM_.Ctrl_WB_RegWrite = IDEX.Ctrl_WB_RegWrite;
+	EXMEM_.Ctrl_WB_MemtoReg = IDEX.Ctrl_WB_MemtoReg;
+
+	//.....
 }
 
 
@@ -132,7 +212,15 @@ void Simulator::MEM()
 //写回
 void Simulator::WB()
 {
-	//read MEMWB
+	// 本阶段已经无需考虑冒险和旁路
+	// read MEMWB
+	char RegWrite = MEMWB.Ctrl_WB_RegWrite;
+	char MemtoReg = MEMWB.Ctrl_WB_MemtoReg;
+	REG ALU_out = MEMWB.ALU_out;
+	REG Mem_read = MEMWB.Mem_read;
+	uint Reg_dst = MEMWB.Reg_dst;
 
-	//write reg
+	if(RegWrite)	//write reg
+		reg[Reg_dst] = MemtoReg ? Mem_read : ALU_out;
+
 }

@@ -1,6 +1,13 @@
 #ifndef HAPPY_HAPPY_FRIENDS
 #define HAPPY_HAPPY_FRIENDS
 
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
+
 typedef unsigned int uint;
 typedef long long ll;
 typedef unsigned long long ull;
@@ -35,7 +42,7 @@ enum OP_NAME
     OP_SLLI,
     OP_SLTI,
     OP_XORI,
-    OP_SLRI,
+    OP_SRLI,
     OP_SRAI,
     OP_ORI,
     OP_ANDI,
@@ -53,6 +60,9 @@ enum OP_NAME
     OP_AUIPC,
     OP_LUI,
     OP_JAL,
+    OP_INVALID
 };
+
+extern ull calc_mulh(ull a, ull b);
 
 #endif

@@ -1,6 +1,3 @@
-#include <iostream>
-#include <cstring>
-#include <cstdio>
 #include "Simulation.h"
 using namespace std;
 
