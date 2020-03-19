@@ -1,15 +1,19 @@
 #include "Memory.h"
 
-Memory::Memory(int size = 1000000){
+Memory::Memory(int size){
     memory = new char[size];
     memset(memory, 0, size);
 }
 
-void Memory::ReadMem(int addr, int size, ull &value){
-    DEBUG("Reading VA 0x%x, size %d, value 0x%x\n", addr, size, value);
+//----------------------------
+//  直接返回ull 如果size<8会自己截断的...
+//----------------------------
+
+ull Memory::ReadMem(int addr, int size){
+    ull value;
     switch(size){
         case 1:
-            value = memory[addr];
+            value = *(uchar*)memory[addr];
             break;
         case 2:
             value = *(ushort *)(memory + addr);
@@ -24,10 +28,12 @@ void Memory::ReadMem(int addr, int size, ull &value){
             fprintf(stderr, "Unsupported size for reading memory > <\n");
             assert(false);
         }
+    DEBUG("Reading VA 0x%08x, size %d\n", addr, size);
+    return value;
 }
 
 void Memory::WriteMem(int addr, int size, ull value){
-    DEBUG("Writing VA 0x%x, size %d, value 0x%x\n", addr, size, value);
+    DEBUG("Writing VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
     switch(size){
         case 1:
             memory[addr] = (uchar)(value & 0xFF);

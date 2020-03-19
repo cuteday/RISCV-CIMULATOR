@@ -3,7 +3,7 @@
 #include "Utility.h"
 
 bool debug_on;
-void DEBUG(char* format, ...){
+void DEBUG(const char format[], ...){
     // 变长参数用于调试...!
     if(debug_on){
         va_list ap;

@@ -1,7 +1,7 @@
 #include "Simulation.h"
 using namespace std;
 
-char *test_file = "./sort";
+char test_file[] = "./sort";
 
 int main(int argc, char* argv[]){
     debug_on = true;

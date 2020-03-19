@@ -1,6 +1,6 @@
 #include"Read_Elf.h"
 
-ElfReader::ElfReader(char* filename, char* elfname){
+ElfReader::ElfReader(const char filename[], const char elfname[]){
 	// print to stdout bu default
 	file = fopen(filename, "r");
 	if(elfname == NULL)

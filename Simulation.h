@@ -4,6 +4,7 @@
 #include "Reg_def.h"
 #include "Read_Elf.h"
 #include "Instruction.h"
+#include "Memory.h"
 
 // 课堂摸鱼笔记
 // 多周期数据通路 Cycle数?
@@ -88,15 +89,15 @@
 #define F7_MSE 1
 #define F7_ECALL 0
 
-#define MAX 100000000
+#define MEMSIZE 10000000
 
 class Simulator{
 public:
     ElfReader *elf; // 可执行文件解析
 
-
     //主存
-    unsigned int memory[MAX];
+    //unsigned int memory[MAX];
+    Memory* mainMemory;
     //寄存器堆
     REG reg[32];
     //PC

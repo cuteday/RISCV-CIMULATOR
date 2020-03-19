@@ -1,5 +1,5 @@
-#ifndef UTILS
-#define UTILS
+#ifndef REG_DEF
+#define REG_DEF
 #include "Utility.h"
 
 typedef unsigned long long REG;
@@ -50,7 +50,7 @@ struct EX_MEM{
 };
 
 struct MEM_WB{
-	unsigned int Mem_read;
+	REG Mem_read;
 	REG ALU_out;
 	int Reg_dst;
 		
