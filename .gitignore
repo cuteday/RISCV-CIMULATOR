@@ -1,6 +1,5 @@
 
-poi.cc
-Read_Elf_Ori.cpp
 *.o
 run
 sort
+tests/*

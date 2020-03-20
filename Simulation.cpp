@@ -7,10 +7,6 @@ Simulator::Simulator(char* filename){
 	mainMemory = new Memory(MEMSIZE);
 }
 
-int Simulator::ext_signed(unsigned int src, int bit){
-	return 0; 
-}
-
 void Simulator::load_memory(){
 	// 没错 就是简单的线性映射(转换？)
 	// Load code segment
@@ -23,53 +19,70 @@ void Simulator::load_memory(){
 	//设置入口地址
 	PC=elf->entry>>2;
 	//设置全局数据段地址寄存器
-	reg[3]=elf->gp;
-	reg[2]=MEMSIZE/2;//栈基址 （sp寄存器）
+	reg[REG_GP]=elf->gp;
+	reg[REG_SP]=MEMSIZE/2;	//栈基址 （sp寄存器）
 }
 
+// 针对数据冒险，已经：
+// 在EX加入了旁路单元进行转发	  √
+// 在ID加入了冒险检测单元stall LU 	√
+// 针对控制冒险，
 
-void Simulator::simulate()
-{
+void Simulator::simulate(){
 	//结束PC的设置
 	int end=(int)elf->endPC/4-1;
-	while(PC!=end)
-	{
+	while(PC!=end){
+
+		// 所有控制位需要恢复默认值
+		memset(&IFID_, 0, sizeof(IFID_));
+		memset(&IDEX_, 0, sizeof(IDEX_));
+		memset(&EXMEM_, 0, sizeof(EXMEM_));
+		memset(&MEMWB_, 0, sizeof(MEMWB_));
+		
 		// 运行
-		// 倒着执行? nonono
+		WB();	// Write Back First?
 		IF();
 		ID();
 		EX();
 		MEM();
-		WB();
-
+		
 		//更新中间寄存器
-		IFID=IFID_;
-		IDEX=IDEX_;
+		if(!IFID.stall)		// IF stalled?
+			IFID=IFID_;
+		else{
+			PC -= 4;		// 本次PC保持不变
+			IFID.stall--;
+		}
+		if(!IDEX.stall)
+			IDEX=IDEX_;
+		else
+			IDEX.stall--;
 		EXMEM=EXMEM_;
 		MEMWB=MEMWB_;
 
         if(exit_flag==1)
             break;
-
-        reg[0]=0;//一直为零
+		
+        // reg[REG_ZERO] = 0;	//一直为零,  不必要因为禁止对该寄存器进行更改...
 	}
 }
 
 //取指令
-void Simulator::IF()
-{
-	//write IFID_
-	IFID.inst = mainMemory->ReadMem(PC, 4);
+void Simulator::IF(){
+	// if(IFID.stall) return;
 
-	PC=PC+1;
+	//write IFID_
+	IFID_.inst = mainMemory->ReadMem(PC, 4);
+
+	PC=PC + 4;
 	IFID_.PC=PC;	// 前传更新后的PC (PC+1)
 }
 
 
 
 //访问存储器
-void Simulator::MEM()
-{
+void Simulator::MEM(){
+
 	//read EXMEM
 	REG ALU_out = EXMEM.ALU_out;	// Address 
 	REG Reg_Rt = EXMEM.Reg_Rt;		// operand
@@ -86,27 +99,26 @@ void Simulator::MEM()
 		mainMemory->WriteMem(ALU_out, WriteLen, Reg_Rt);
 
 	//write MEMWB_
-
-	MEMWB_.Reg_dst = EXMEM.Reg_dst;
 	MEMWB_.Mem_read = Mem_read;
 	MEMWB_.ALU_out = ALU_out;
-	MEMWB_.Ctrl_WB_MemtoReg = EXMEM.Ctrl_WB_MemtoReg;
+	MEMWB_.Reg_dst = EXMEM.Reg_dst;
 	MEMWB_.Ctrl_WB_RegWrite = EXMEM.Ctrl_WB_RegWrite;
+	MEMWB_.Ctrl_WB_MemtoReg = EXMEM.Ctrl_WB_MemtoReg;
 }
 
 
 //写回
-void Simulator::WB()
-{
+void Simulator::WB(){
+
 	// 本阶段已经无需考虑冒险和旁路
 	// read MEMWB
 	char RegWrite = MEMWB.Ctrl_WB_RegWrite;
 	char MemtoReg = MEMWB.Ctrl_WB_MemtoReg;
-	REG ALU_out = MEMWB.ALU_out;
-	REG Mem_read = MEMWB.Mem_read;
+	REG ALU_out = MEMWB_.ALU_out;
+	REG Mem_read = MEMWB_.Mem_read;
+
 	uint Reg_dst = MEMWB.Reg_dst;
 
-	if(RegWrite)	//write reg
+	if(RegWrite && Reg_dst)	//write reg
 		reg[Reg_dst] = MemtoReg ? Mem_read : ALU_out;
-
 }

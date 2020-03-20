@@ -1,5 +1,7 @@
 #include "Simulation.h"
 
+
+
 //执行
 void Simulator::EX()
 {
@@ -11,20 +13,38 @@ void Simulator::EX()
 	char RegWrite = IDEX.Ctrl_WB_RegWrite;
 	int Imm = IDEX.Imm;
 	REG_SIGNED inp1, inp2;
+	REG_SIGNED Reg_Rs = IDEX.Reg_Rs, Reg_Rt = IDEX.Reg_Rt;
 
 	//Branch PC calulate
 	//...
 
-	//choose ALU input number
+	// choose ALU input operands
+	// THIS is a data bypass - DATA HAZARD 
+	if(MEMWB.Ctrl_WB_RegWrite && MEMWB.Reg_dst){
+		if(MEMWB.Reg_dst == IDEX.Rs)
+			Reg_Rs = MEMWB.Ctrl_WB_MemtoReg? MEMWB.Mem_read : MEMWB.ALU_out;	// 可能来自ALU或内存
+		if(MEMWB.Reg_dst == IDEX.Rt && !IDEX.Ctrl_EX_ALUSrc)
+			Reg_Rt = MEMWB.Ctrl_WB_MemtoReg? MEMWB.Mem_read : MEMWB.ALU_out;	// 操作数确实来自Rt...
+	}	// 顺序不能变: EXMEM的结果更新
+	if(MEMWB.Ctrl_WB_RegWrite && EXMEM.Reg_dst){
+		// 这是ALU阶段的结果, 不是内存读取, 不需要stall...
+		if(!EXMEM.Ctrl_WB_MemtoReg){
+			if(EXMEM.Reg_dst == IDEX.Rs)
+				Reg_Rs = EXMEM.ALU_out;		// 就是刚出炉的ALU结果啦
+			if (EXMEM.Reg_dst == IDEX.Rt && !IDEX.Ctrl_EX_ALUSrc)
+				Reg_Rt = EXMEM.ALU_out;	
+		}
+		// else :Load Use Harzard, need Stall #1
+		// Detected in ID
+		// bubble EX,  stall ID, IF
+
+	}
 	inp1 = IDEX.Reg_Rs;
-	inp2 = IDEX.Ctrl_EX_ALUSrc ? Imm : IDEX.Reg_Rt;
+	inp2 = IDEX.Ctrl_EX_ALUSrc ? Imm : Reg_Rt;	// choose Imm when ALUSrc == 1
 
 	//alu calculate
 	int Zero;
 	REG ALUout;
-	// switch(ALUOp){
-	// default:;
-	// }
 
 	switch(op_name){
 		case OP_ADD:
@@ -59,7 +79,7 @@ void Simulator::EX()
 		case OP_SRLI:
 			ALUout = REG(inp1) >> (inp2 & 0x3f);
 			break;
-		case OP_SRA:	// algorimetic shift
+		case OP_SRA:	// arithmetic shift
 		case OP_SRAI:
 			ALUout = inp1 >> (inp2 & 0x3f);
 			break;
@@ -110,9 +130,9 @@ void Simulator::EX()
 	//write EXMEM_
 	EXMEM_.ALU_out=ALUout;
 	EXMEM_.PC=temp_PC;
-	EXMEM_.Reg_dst = RegDst;
+	EXMEM_.Reg_dst = RegDst ? IDEX.Rt : IDEX.Rd;
 	EXMEM_.Zero = !ALUout;
-	EXMEM_.Reg_Rt = IDEX.Reg_Rt;
+	EXMEM_.Reg_Rt = Reg_Rt;	// 下一步可能Rt写入内存...
 
 	EXMEM_.Ctrl_M_MemRead = IDEX.Ctrl_M_MemRead;
 	EXMEM_.Ctrl_M_MemWrite = IDEX.Ctrl_M_MemWrite;

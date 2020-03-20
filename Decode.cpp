@@ -14,7 +14,7 @@ void Simulator::ID()
     OP_NAME op_name = OP_INVALID;
     int Imm = 0;
 
-    char RegDst = 0;    // RegDst(0-31?) Valid if RegWrite
+    char RegDst = 0;    // write to rd? / rt?
     char ALUop = 0;     // add / sub / mul / div / 
     char ALUSrc = 0;    // ALU op2 from rt? / imm?
     char Branch = 0;    //
@@ -23,6 +23,7 @@ void Simulator::ID()
     char RegWrite = 0;  //
     char MemtoReg = 0;  //
     //....
+
     
 
     if(inst.OP==OPCODE_R)   // Func3, Func7
@@ -158,22 +159,22 @@ void Simulator::ID()
         Imm = inst.imm_i;
         op_name = OP_JALR;
     }
-    else if(inst.OP==OPCODE_UJ){    // Uncond Kirara Jump
+    else if(inst.OP==OPCODE_UJ){    
         Imm = inst.imm_uj;
         op_name = OP_JAL;
     }
     else if (inst.OP == OPCODE_AUIPC)
-    {                                 // UnCond Kirara Jump
-        Imm = inst.imm_uj;
+    {                                 
+        Imm = inst.imm_u;
         op_name = OP_AUIPC;
     }
     else if (inst.OP == OPCODE_LUI)
-    {                                // Uncond Kirara Jump
-        Imm = inst.imm_uj;
+    {                                
+        Imm = inst.imm_u;
         op_name = OP_LUI;
     }
     else if (inst.OP == OPCODE_ECALL){ // Handle syscall
-        // syscall no in $a0
+        // syscall no in $a7, args in $a0
         op_name = OP_ECALL;
 
     }else{// Illegal Opcode
@@ -185,15 +186,30 @@ void Simulator::ID()
     }
 
     DEBUG("leave a msg here  > < ");
+    // Load Use 冒险检测
+    if(IDEX.Ctrl_M_MemRead && 
+        (IDEX.Rd == inst.rs || IDEX.Rd == inst.rt)){
+            // Stall IF ID
+            IFID.stall = 1;
+            IDEX.stall = 1;
+            return;
+    }
 
     //write IDEX_
     IDEX_.inst = op_name;
 
-    IDEX_.Rd=inst.rd;   // 目标寄存器...
-	IDEX_.Rt=inst.rt;
+    IDEX_.Rd = inst.rd;         // 目标寄存器...
+    IDEX_.Rt = inst.rt;
+    IDEX_.Rs = inst.rs;
+    
+    // if(op_name = OP_ECALL){
+    //     // 霸王条款，屑屑
+    //     IDEX_.Rs = REG_A7;  // Syscall no
+    //     IDEX_.Rt = REG_A0;  // Arg
+    // }
 
     IDEX_.Imm = Imm;
-    IDEX_.Reg_Rs = reg[inst.rs]; // 读取寄存器操作数
+    IDEX_.Reg_Rs = reg[inst.rs];    // 读取寄存器操作数
     IDEX_.Reg_Rt = reg[inst.rt];
     IDEX_.PC = IFID.PC;             // forward PC+4
 	//...
@@ -210,4 +226,3 @@ void Simulator::ID()
     IDEX_.Ctrl_WB_MemtoReg = MemtoReg;
     //....
 }
-
