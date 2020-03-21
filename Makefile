@@ -5,6 +5,7 @@
 CC = c++
 CFLAGS = 
 LIBS = 
+MAKE = make
 
 EXEC = run
 
@@ -26,6 +27,8 @@ C_FILES = ./main.cpp\
 		./Execute.cpp\
 
 O_FILES = main.o Read_Elf.o Simulation.o Memory.o Utility.o Decode.o Execute.o 
+
+all: $(EXEC)
 
 $(EXEC): $(O_FILES)
 	$(CC) $(CFLAGS) -o $(EXEC) $(O_FILES)

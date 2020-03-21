@@ -1,3 +1,6 @@
+#ifndef INSTRUCT
+#define INSTRUCT
+
 class Instruction{
 public:
     unsigned int inst;
@@ -84,5 +87,8 @@ enum OP_NAME
     OP_AUIPC,
     OP_LUI,
     OP_JAL,
+    OP_NOP,
     OP_INVALID
 };
+
+#endif

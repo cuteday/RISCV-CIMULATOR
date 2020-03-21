@@ -18,17 +18,18 @@
 // 如何处理系统调用?
 // 使用内联汇编改写系统调用
 
-#define OPCODE_UJ       0x6f // OPCODE UJ    0x6f
+#define OPCODE_UJ       0x6f    // OPCODE UJ    0x6f
 #define OPCODE_R        0x33    // OPCODE REG   0x33
-#define OPCODE_ECALL    0x73 //SYSCALL!
+#define OPCODE_ECALL    0x73    // SYSCALL!
 #define OPCODE_LW       0x03
-#define OPCODE_I     0x13
+#define OPCODE_I        0x13
 #define OPCODE_ADDIW    0x1b
 #define OPCODE_JALR     0x67
 #define OPCODE_S        0x23
 #define OPCODE_SB       0x63
 #define OPCODE_AUIPC    0x17
-#define OPCODE_LUI      0x37         
+#define OPCODE_LUI      0x37       
+#define OPCODE_NOP      0x00    // 我自己整的 ^ ^
 
 #define F3_ADD  0     // FUNCT3
 #define F3_MUL  0
@@ -89,19 +90,46 @@
 #define F7_MSE 1
 #define F7_ECALL 0
 
+#define NUM_STAGES 5
 #define MEMSIZE 10000000
+
+enum STAGE_NAME{
+    STAGE_IF,
+    STAGE_ID,
+    STAGE_EX,
+    STAGE_MEM,
+    STAGE_WB
+};
+
+enum SYSCALL_NAME{
+    SYSCALL_EXIT,
+
+    SYSCALL_PRINTC,
+    SYSCALL_PRINTD,
+    SYSCALL_PRINTS,
+    
+    SYSCALL_GETC,
+    SYSCALL_GETD,
+};
 
 class Simulator{
 public:
-    ElfReader *elf; // 可执行文件解析
 
-    //主存
+    Simulator(char* filename);
+    void load_memory();
+    void simulate();    
+    
+private:
+
+    ElfReader *elf; // 可执行文件解析
+    
     //unsigned int memory[MAX];
     Memory* mainMemory;
     //寄存器堆
     REG reg[32];
     //PC
     int PC;
+    uchar stall[NUM_STAGES];
 
     //指令运行数
     long long inst_num;
@@ -113,24 +141,14 @@ public:
     ID_EX IDEX, IDEX_;
     EX_MEM EXMEM, EXMEM_;
     MEM_WB MEMWB, MEMWB_;
-
-    Simulator(char* filename);
-
-    //加载内存
-    void load_memory();
-    void simulate();
-
     void IF();
     void ID();
     void EX();
     void MEM();
     void WB();
 
-    //符号扩展
-    int ext_signed(unsigned int src, int bit);
-    //获取指定位
-    unsigned int getbit(int s, int e);
-    unsigned int getbit(unsigned inst, int s, int e);
+    void bubble(STAGE_NAME stage);
+    REG_SIGNED Syscall(SYSCALL_NAME type, REG arg);
 };
 
 #endif

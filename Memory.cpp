@@ -1,25 +1,30 @@
 #include "Memory.h"
 
-Memory::Memory(int size){
+Memory::Memory(int size):memsize(size){
     memory = new char[size];
     memset(memory, 0, size);
 }
 
 //-----------------------------------------
-//  直接返回ull 如果size<8会自己截断的...
+//  符号扩展signed ext:
+//  仅与扩展前的类型有关
+//  若扩展前为unsigned 则一定是无符号扩展
+//  若扩展前为signed 则一定是符号扩展, 即使是转换为unsigned
 //-----------------------------------------
 
-ull Memory::ReadMem(int addr, int size){
+ull Memory::ReadMem(int addr, int size, bool sign_ext){
+    DEBUG("Reading VA 0x%08x, size %d\n", addr, size);
+    assert((uint)addr + size < memsize);
     ull value;
     switch(size){
         case 1:
-            value = *(uchar*)memory[addr];
+            value = sign_ext? *(char*)(memory + addr) : *(uchar*)(memory + addr);
             break;
         case 2:
-            value = *(ushort *)(memory + addr);
+            value = sign_ext? *(short*)(memory + addr) : *(ushort*)(memory + addr);
             break;
         case 4:
-            value = *(uint *)(memory + addr);
+            value = sign_ext? *(int*)(memory + addr) :*(uint *)(memory + addr);
             break;
         case 8:
             value = *(ull *)(memory + addr);
@@ -28,12 +33,13 @@ ull Memory::ReadMem(int addr, int size){
             fprintf(stderr, "Unsupported size for reading memory > <\n");
             assert(false);
         }
-    DEBUG("Reading VA 0x%08x, size %d\n", addr, size);
+    
     return value;
 }
 
 void Memory::WriteMem(int addr, int size, ull value){
     DEBUG("Writing VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
+    assert((uint)addr + size < memsize);
     switch(size){
         case 1:
             memory[addr] = (uchar)(value & 0xFF);
@@ -51,4 +57,5 @@ void Memory::WriteMem(int addr, int size, ull value){
             fprintf(stderr, "Unsupported size for writing memory > <\n");
             assert(false);
         }
+    
 }

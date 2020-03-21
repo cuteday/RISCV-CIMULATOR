@@ -1,6 +1,7 @@
 #ifndef REG_DEF
 #define REG_DEF
 #include "Utility.h"
+#include "Instruction.h"
 
 typedef unsigned long long REG;
 typedef long long REG_SIGNED;
@@ -10,7 +11,6 @@ typedef long long REG_SIGNED;
 struct IF_ID{
 	uint inst;
 	int PC;
-  uint stall;   // IF 是否处于STALL状态...?
 };
 
 struct ID_EX{	
@@ -32,14 +32,12 @@ struct ID_EX{
 	char Ctrl_WB_RegWrite;
 	char Ctrl_WB_MemtoReg;
 
-  uint stall;     // ID 是否处于STALL状态...?
 };
 
 struct EX_MEM{
 	int PC;
 	uint Reg_dst;
 	REG ALU_out;
-	bool Zero;
 	REG Reg_Rt;
 
 	char Ctrl_M_Branch;		// whether to branch

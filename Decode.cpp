@@ -4,8 +4,8 @@
 // stall 应该是再按原样执行一遍
 // 即不要更新这个阶段的流水线寄存器
 // 但可以更新下一个阶段的流水线寄存器
-// 即使是这样也可以吗
 
+// ID:INVADED 异度入侵!!
 //译码
 void Simulator::ID()
 {
@@ -24,8 +24,6 @@ void Simulator::ID()
     char MemtoReg = 0;  //
     //....
 
-    
-
     if(inst.OP==OPCODE_R)   // Func3, Func7
 	{
         // No imm
@@ -33,8 +31,7 @@ void Simulator::ID()
 
         if (inst.fuc3 == F3_ADD && inst.fuc7 == F7_ADD){
             op_name = OP_ADD;
-        }
-        else if (inst.fuc3 == F3_MUL && inst.fuc7 == F7_MUL) {
+        }else if (inst.fuc3 == F3_MUL && inst.fuc7 == F7_MUL) {
             op_name = OP_MUL;
         }else if (inst.fuc3 == F3_SUB && inst.fuc7 == F7_SUB) {
             op_name = OP_SUB;
@@ -154,13 +151,26 @@ void Simulator::ID()
             fprintf(stderr, "Invalid function3 code for SB\n");
         }
     }
-    else if(inst.OP==OPCODE_JALR){    // Uncond Kirara Jump
-        
+    else if(inst.OP == OPCODE_ADDIW){
         Imm = inst.imm_i;
+        ALUSrc = 1;
+
+        op_name = OP_ADDIW;
+    }
+    else if(inst.OP==OPCODE_JALR){    // Uncond Kirara Jump
+
+        Branch = true;
+        RegWrite = true;
+        Imm = inst.imm_i;
+
         op_name = OP_JALR;
     }
-    else if(inst.OP==OPCODE_UJ){    
+    else if(inst.OP==OPCODE_UJ){   // JAL
+
+        Branch = true;
+        RegWrite = true;
         Imm = inst.imm_uj;
+
         op_name = OP_JAL;
     }
     else if (inst.OP == OPCODE_AUIPC)
@@ -175,13 +185,22 @@ void Simulator::ID()
     }
     else if (inst.OP == OPCODE_ECALL){ // Handle syscall
         // syscall no in $a7, args in $a0
-        op_name = OP_ECALL;
+        RegWrite = true;    // 要有返回值的嘛
 
-    }else{// Illegal Opcode
+        op_name = OP_ECALL;
+        inst.rs = REG_A7;   // 这是为了防止A7和A0的数据大冒险 @
+        inst.rt = REG_A0;
+        inst.rd = REG_A0;
+    }
+    else if (inst.OP == OPCODE_NOP){
+        
+    }
+    else
+    { // Illegal Opcode
         fprintf(stderr, "Invalid operation code...\n");
     }
     if(op_name == OP_INVALID){   
-        fprintf(stderr, "Illegal Instuction 0x%x. Halting > <\n", inst.inst);
+        fprintf(stderr, "Illegal Instuction 0x%08x. Halting > <\n", inst.inst);
         assert(false);
     }
 
@@ -190,8 +209,9 @@ void Simulator::ID()
     if(IDEX.Ctrl_M_MemRead && 
         (IDEX.Rd == inst.rs || IDEX.Rd == inst.rt)){
             // Stall IF ID
-            IFID.stall = 1;
-            IDEX.stall = 1;
+            stall[STAGE_IF] = 1;
+            stall[STAGE_ID] = 1;
+            bubble(STAGE_EX);
             return;
     }
 
@@ -201,12 +221,6 @@ void Simulator::ID()
     IDEX_.Rd = inst.rd;         // 目标寄存器...
     IDEX_.Rt = inst.rt;
     IDEX_.Rs = inst.rs;
-    
-    // if(op_name = OP_ECALL){
-    //     // 霸王条款，屑屑
-    //     IDEX_.Rs = REG_A7;  // Syscall no
-    //     IDEX_.Rt = REG_A0;  // Arg
-    // }
 
     IDEX_.Imm = Imm;
     IDEX_.Reg_Rs = reg[inst.rs];    // 读取寄存器操作数

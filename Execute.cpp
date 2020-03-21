@@ -1,19 +1,19 @@
 #include "Simulation.h"
 
-
-
 //执行
 void Simulator::EX()
 {
 	//read ID_EX
 	OP_NAME op_name = IDEX.inst;
-	int temp_PC=IDEX.PC;
 
-	char RegDst=IDEX.Ctrl_EX_RegDst;
+	char Branch = IDEX.Ctrl_M_Branch;
+	char RegDst = IDEX.Ctrl_EX_RegDst;
 	char RegWrite = IDEX.Ctrl_WB_RegWrite;
 	int Imm = IDEX.Imm;
 	REG_SIGNED inp1, inp2;
 	REG_SIGNED Reg_Rs = IDEX.Reg_Rs, Reg_Rt = IDEX.Reg_Rt;
+	int Reg_PC = IDEX.PC;
+	
 
 	//Branch PC calulate
 	//...
@@ -39,7 +39,7 @@ void Simulator::EX()
 		// bubble EX,  stall ID, IF
 
 	}
-	inp1 = IDEX.Reg_Rs;
+	inp1 = Reg_Rs;
 	inp2 = IDEX.Ctrl_EX_ALUSrc ? Imm : Reg_Rt;	// choose Imm when ALUSrc == 1
 
 	//alu calculate
@@ -113,7 +113,46 @@ void Simulator::EX()
 			break;
 
 		case OP_LUI:
-			ALUout = inp2 << 12;
+			ALUout = Imm << 12;
+			break;
+
+		case OP_AUIPC:
+			ALUout = Reg_PC + (Imm << 12);
+			break;
+
+		// Control Transfer ops starts here /!
+		case OP_JAL:
+			ALUout = Reg_PC;
+			Reg_PC = Reg_PC + Imm;
+			break;
+		case OP_JALR:
+			ALUout = Reg_PC;
+			Reg_PC = Reg_Rs + Imm;
+			break;
+
+		case OP_BEQ:
+			Branch &= inp1 == inp2;
+			Reg_PC += Imm;
+			break;
+		case OP_BNE:
+			Branch &= inp1 != inp2;
+			Reg_PC += Imm;
+			break;
+		case OP_BLT:
+			Branch &= inp1 < inp2;
+			Reg_PC += Imm;
+			break;
+		case OP_BGE:
+			Branch &= inp1 > inp2;
+			Reg_PC += Imm;
+			break;
+
+		case OP_ECALL:
+			Syscall((SYSCALL_NAME)Reg_Rs, Reg_Rt);
+			break;
+
+		case OP_NOP:
+			// 这是bubble的删减片段
 			break;
 
 		default:
@@ -122,18 +161,13 @@ void Simulator::EX()
 			assert(false);
 	}
 
-	//choose reg dst address
-	if(RegDst){		// not reg $0
-
-	}
-
 	//write EXMEM_
 	EXMEM_.ALU_out=ALUout;
-	EXMEM_.PC=temp_PC;
+	EXMEM_.PC = Reg_PC;
 	EXMEM_.Reg_dst = RegDst ? IDEX.Rt : IDEX.Rd;
-	EXMEM_.Zero = !ALUout;
 	EXMEM_.Reg_Rt = Reg_Rt;	// 下一步可能Rt写入内存...
 
+	EXMEM_.Ctrl_M_Branch = Branch;
 	EXMEM_.Ctrl_M_MemRead = IDEX.Ctrl_M_MemRead;
 	EXMEM_.Ctrl_M_MemWrite = IDEX.Ctrl_M_MemWrite;
 	EXMEM_.Ctrl_WB_RegWrite = IDEX.Ctrl_WB_RegWrite;

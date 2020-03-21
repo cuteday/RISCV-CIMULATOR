@@ -74,6 +74,8 @@ const char *op_names[] = {
 
     "auipc",
     "lui",
-    "jal"
+    "jal",
+
+    "nop"
 };
 
