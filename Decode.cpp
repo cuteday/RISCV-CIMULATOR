@@ -6,7 +6,7 @@
 // 但可以更新下一个阶段的流水线寄存器
 
 // ID:INVADED 异度入侵!!
-//译码
+// 译码
 void Simulator::ID()
 {
 	// 从上级（还未被本次时钟周期更新的）流水线寄存器中取出指令
@@ -167,8 +167,22 @@ void Simulator::ID()
         RegWrite = true;                // ommited T T
         Imm = inst.imm_i;
         ALUSrc = 1;
-
-        op_name = OP_ADDIW;
+        
+        if(inst.fuc3 == F3_ADDIW){
+            op_name = OP_ADDIW;
+        }else if(inst.fuc3 == F3_SLLIW){
+            op_name = OP_SLLIW;
+        }else if(inst.fuc3 == F3_SRLIW){
+            if(inst.fuc7 == F7_SRLIW){
+                op_name = OP_SRLIW;
+            }else if (inst.fuc7 == F7_SRAIW){
+                op_name = OP_SRAIW;
+            }else{
+                fprintf(stderr, "Invalid function7 code for OP32I-SRLIW\n");
+            }
+        }else{
+            fprintf(stderr, "Invalid function3 code for OP32I\n");
+        }
     }
     else if(inst.OP==OPCODE_JALR){      // Uncond Kirara Jump
 
@@ -182,7 +196,6 @@ void Simulator::ID()
 
         Branch = true;
         RegWrite = true;
-        ALUSrc = 1;
         Imm = inst.imm_uj;
 
         op_name = OP_JAL;
@@ -207,6 +220,37 @@ void Simulator::ID()
         inst.rs = REG_A7;   // 这是为了防止A7和A0的数据大冒险 @
         inst.rt = REG_A0;
         inst.rd = REG_A0;
+    }
+    else if (inst.OP == OPCODE_32){
+        // 32bit 部分指令集
+
+        RegWrite = true;
+
+        if(inst.fuc3 == F3_ADDW){
+            if(inst.fuc7 == F7_ADDW){
+                op_name = OP_ADDW;
+            }else if(inst.fuc7 == F7_SUBW){
+                op_name = OP_SUBW;
+            }else{
+                fprintf(stderr, "Invalid function7 code for OP32-ADDW\n");
+            }
+        }else if(inst.fuc3 == F3_SLLW){
+            if(inst.fuc7 == F7_SLLW){
+                op_name = OP_SLLW;
+            }else{
+                fprintf(stderr, "Invalid function7 code for OP32-SLLW\n");
+            }
+        }else if(inst.fuc3 == F3_SRLW){
+            if(inst.fuc7 == F7_SRLW){
+                op_name = OP_SRLW;
+            }else if(inst.fuc7 == F7_SRAW){
+                op_name = OP_SRAW;
+            }else{
+                fprintf(stderr, "Invalid function7 code for OP32-SRLW\n");
+            }
+        }else{
+            fprintf(stderr, "Invalid function3 code for OP32-INST\n");
+        }
     }
     else if (inst.OP == OPCODE_NOP){
         op_name = OP_NOP;

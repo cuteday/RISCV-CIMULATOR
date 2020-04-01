@@ -43,8 +43,7 @@ public:
     }
 };
 
-enum OP_NAME
-{
+enum OP_NAME{
     OP_NOP,
     OP_ADD,
     OP_MUL,
@@ -63,6 +62,9 @@ enum OP_NAME
     OP_LH,
     OP_LW,
     OP_LD,
+    OP_LBU,
+    OP_LHU,
+    OP_LWU,
     OP_ADDI,
     OP_SLLI,
     OP_SLTI,
@@ -86,10 +88,18 @@ enum OP_NAME
     OP_LUI,
     OP_JAL,
 
-    // Extended options
-    OP_LBU,
-    OP_LHU,
-    OP_LWU,
+    // Extended options... (GreenCard你骗我 不止这么多...)
+    // 32-bit ops
+    OP_ADDW,
+    OP_SUBW,
+    OP_SLLW,
+    OP_SRLW,
+    OP_SRAW,
+
+    OP_SLLIW,   // ADDIW series...
+    OP_SRLIW,
+    OP_SRAIW,
+    
     OP_INVALID
 };
 

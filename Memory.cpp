@@ -42,16 +42,16 @@ void Memory::WriteMem(int addr, int size, ull value){
     assert((uint)addr + size < memsize);
     switch(size){
         case 1:
-            memory[addr] = (uchar)(value & 0xFF);
+            memory[addr] = (char)(value & 0xFF);
             break;
         case 2:
-            memory[addr] = (ushort)(value & 0xFFFF);
+            *(short*)(memory+addr) = (short)(value & 0xFFFF);
             break;
         case 4:
-            memory[addr] = (uint)(value & 0xFFFFFFFF);
+            *(int*)(memory+addr) = (int)(value & 0xFFFFFFFF);
             break;
         case 8:
-            memory[addr] = value;
+            *(long long*)(memory+addr) = value;
             break;
         default:
             fprintf(stderr, "Unsupported size %d for writing memory > <\n", size);

@@ -98,8 +98,24 @@ void Simulator::EX()
 			break;
 		// R series and some I insts end here...
 
+		case OP_ADDW:
 		case OP_ADDIW:
-			ALUout = REG_SIGNED(int(inp1 + inp2));
+			ALUout = REG_SIGNED(int(inp1) + int(inp2));
+			break;
+		case OP_SUBW:
+			ALUout = REG_SIGNED(int(inp1) - int(inp2));
+			break;
+		case OP_SLLW:
+		case OP_SLLIW:
+			ALUout = REG_SIGNED(uint(inp1) << (inp2 & 0x1f));
+			break;
+		case OP_SRLW:
+		case OP_SRLIW:
+			ALUout = REG_SIGNED(uint(inp1) >> (inp2 & 0x1f));
+			break;
+		case OP_SRAW:
+		case OP_SRAIW:
+			ALUout = REG_SIGNED(int(inp1) >> (inp2 & 0x1f));
 			break;
 
 		case OP_LB:		

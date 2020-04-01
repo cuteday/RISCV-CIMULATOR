@@ -90,6 +90,7 @@ private:
 #define OPCODE_SB       0x63
 #define OPCODE_AUIPC    0x17
 #define OPCODE_LUI      0x37       
+#define OPCODE_32       0x3B
 #define OPCODE_NOP      0x00    // 我自己整的 ^ ^
 
 #define F3_ADD  0     // FUNCT3
@@ -106,6 +107,10 @@ private:
 #define F3_REM  0x6
 #define F3_AND  0x7
 
+#define F3_ADDW 0
+#define F3_SLLW 0x1
+#define F3_SRLW 0x5
+
 #define F7_ADD  0     // FUNCT3
 #define F7_MUL  0x01
 #define F7_SUB  0x20
@@ -119,6 +124,12 @@ private:
 #define F7_OR   0
 #define F7_REM  0x01
 #define F7_AND  0
+
+#define F7_ADDW 0
+#define F7_SUBW 0x20
+#define F7_SLLW 0
+#define F7_SRLW 0
+#define F7_SRAW 0x20
 
 #define F3_LB   0
 #define F3_LH   0x1
@@ -136,7 +147,14 @@ private:
 #define F3_SRAI 0x5 
 #define F3_ORI  0x6
 #define F3_ANDI 0x7
+
 #define F3_ADDIW  0
+#define F3_SLLIW  1
+#define F3_SRLIW  5
+
+#define F7_SRLIW  0  
+#define F7_SRAIW  0x20  
+
 // jarl 两种情况
 #define F3_JALR   0
 // ecall 两种情况
@@ -154,5 +172,3 @@ private:
 
 #define F7_MSE 1
 #define F7_ECALL 0
-
-

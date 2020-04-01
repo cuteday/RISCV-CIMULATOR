@@ -40,7 +40,7 @@ void ArgParser::printHelp(){
     printf("    -f [risc-v64 file]: run executable in simulator\n");
     printf("    -d print debug impormation for simulator\n");
     printf("    -e print elf file parsing results\n");
-    
+
     printf("    -h help information\n");
 }
 
@@ -89,6 +89,10 @@ const char *op_names[] = {
     "lh",
     "lw",
     "ld",
+    "lbu",
+    "lhu",
+    "lwu",
+
     "addi",
     "slli",
     "slti",
@@ -115,9 +119,15 @@ const char *op_names[] = {
     "lui",
     "jal",
 
-    "lbu",
-    "lhu",
-    "lwu",
+    "addw",
+    "subw",
+    "sllw",
+    "srlw",
+    "sraw",
+
+    "slliw",
+    "srliw", 
+    "sraiw",
 
 };
 
