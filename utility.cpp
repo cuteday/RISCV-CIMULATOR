@@ -1,16 +1,53 @@
-#include <cstdarg>
-#include <cstdio>
 #include "Utility.h"
 
-bool debug_on;
-void DEBUG(const char format[], ...){
+bool debug_on[2];
+void DEBUG(DEBUG_MODE mode, const char format[], ...){
     // 变长参数用于调试...!
-    if(debug_on){
+    if(debug_on[mode]){
         va_list ap;
         va_start(ap, format);
         vfprintf(stderr, format, ap);
         va_end(ap);
     }
+}
+
+ArgParser *args;
+ArgParser::ArgParser(int argc, char *argv[]){
+    memset(this, 0, sizeof(ArgParser));
+
+    for (int i = 0; i < argc;i++){
+        if(!strcmp(argv[i], "-f")){
+            if(i == argc - 1){
+                fprintf(stderr, "Specify a executable file.\n");
+                printError();
+            }
+            test_file = argv[++i];
+        }
+        if(!strcmp(argv[i], "-d")){
+            print_debug = true;
+        }
+        if(!strcmp(argv[i], "-e")){
+            print_elf = true;
+        }
+        if(!strcmp(argv[i], "-h")){
+            printHelp();
+        }
+    }
+}
+
+void ArgParser::printHelp(){
+    printf("Usage: \n");
+    printf("    -f [risc-v64 file]: run executable in simulator\n");
+    printf("    -d print debug impormation for simulator\n");
+    printf("    -e print elf file parsing results\n");
+    
+    printf("    -h help information\n");
+}
+
+void ArgParser::printError(){
+    fprintf(stderr, "Incorrect argument format > <\n");
+    fprintf(stderr, "run with -h for help.\n");
+    assert(false);
 }
 
 ull calc_mulh(ull a, ull b){

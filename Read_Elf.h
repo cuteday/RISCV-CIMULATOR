@@ -119,7 +119,7 @@ typedef struct	// Program Header
 
 class ElfReader{
 public:
-	ElfReader(const char filename[], const char elfname_[] = NULL);
+	ElfReader(const char filename[]);
 	void read_elf();
 	void read_Elf_header();
 	void read_elf_sections();
@@ -131,6 +131,7 @@ public:
 	FILE *elf;
 	Elf64_Ehdr elf64_hdr;
 	const char* elfname;
+	bool print_detail;
 
 	char *section_name;	//	at Header String Table Index in ELF_HEADER
 	char *str_table;; 	//	at Section .strtab

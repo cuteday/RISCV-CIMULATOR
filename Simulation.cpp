@@ -4,9 +4,9 @@ using namespace std;
 Simulator::Simulator(char* filename){
 	memset(this, 0, sizeof(Simulator));
 
-	fprintf(stdout, "Simulator built for %s... > < \n\n", filename);
+	fprintf(stdout, "Simulator built for %s... > < \n", filename);
 
-	elf = new ElfReader(filename, NULL);
+	elf = new ElfReader(filename);
 	mainMemory = new Memory(MEMSIZE);
 
 	load_memory();
@@ -60,11 +60,12 @@ void Simulator::load_memory(){
 // 针对控制冒险，
 
 void Simulator::simulate(){
+	fprintf(stdout, "Starting simulation...\n\n");
 	//结束PC的设置
 	int end = (int)elf->endPC;
 	while(PC != end + 1){
 
-		DEBUG("\nPipelined: New cycle!\n\n");
+		DEBUG( DEBUG_D, "\nPipelined: New cycle!\n\n");
 
 		// 所有控制位需要恢复默认值
 		memset(&IFID_, 0, sizeof(IFID_));
@@ -98,7 +99,7 @@ void Simulator::simulate(){
 		
         // reg[REG_ZERO] = 0;	//一直为零, 不必要 因为禁止对该寄存器进行更改...
 	}
-	fprintf(stdout, "Program finished, halting... > <\n");
+	fprintf(stdout, "\n\nProgram finished, halting... > <\n");
 }
 
 //取指令
@@ -106,7 +107,7 @@ void Simulator::IF(){
 	// if(IFID.stall) return;
 	// IMPORTANT: RISC-V中的相对跳转是对PC而不是PC+4
 
-	DEBUG("InstFecth: Fetching instruction at PC 0x%08x\n", PC);
+	DEBUG(DEBUG_D, "InstFecth: Fetching instruction at PC 0x%08x\n", PC);
 	IFID_.inst = mainMemory->ReadMem(PC, 4);
 	IFID_.PC = PC; // 前传更新前的PC
 	PC += 4;
@@ -131,7 +132,7 @@ void Simulator::MEM(){
 		bubble(STAGE_IF);
 		bubble(STAGE_ID);
 		bubble(STAGE_EX);
-		DEBUG("***MEM: Jump! to PC 0x%08x\n", PC);
+		DEBUG( DEBUG_D, "***MEM: Jump! to PC 0x%08x\n", PC);
 	}
 
 	//read / write memory
@@ -165,14 +166,14 @@ void Simulator::WB(){
 		
 		REG write_val = MemtoReg ? Mem_read : ALU_out;
 		reg[Reg_dst] = write_val;
-		DEBUG("WriteBack: Writing value 0x%016llx to reg %s\n", write_val, reg_names[Reg_dst]);
+		DEBUG( DEBUG_D, "WriteBack: Writing value 0x%016llx to reg %s\n", write_val, reg_names[Reg_dst]);
 	}
 }
 
 REG_SIGNED Simulator::Syscall(SYSCALL_NAME type, REG arg){
 
-	DEBUG("Transfer control to kernel: Syscall\n");
-	DEBUG("Syscall %s, ARG0: %lld\n", scall_names[type], arg);
+	DEBUG( DEBUG_D, "Transfer control to kernel: Syscall\n");
+	DEBUG( DEBUG_D, "Syscall %s, ARG0: %lld\n", scall_names[type], arg);
 
 	REG_SIGNED ret = 0;
 	switch(type){

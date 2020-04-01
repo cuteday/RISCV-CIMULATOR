@@ -220,7 +220,7 @@ void Simulator::ID()
         assert(false);
     }
 
-    DEBUG("Decode: Instruction %s found!  > < its IMM: %d\n", op_names[op_name], Imm);
+    DEBUG( DEBUG_D, "Decode: Instruction %s found!  > < its IMM: %d\n", op_names[op_name], Imm);
 
     // Load Use 冒险检测
     if(IDEX.Ctrl_M_MemRead && 

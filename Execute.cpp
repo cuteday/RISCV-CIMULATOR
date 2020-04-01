@@ -166,7 +166,7 @@ void Simulator::EX()
 			assert(false);
 	}
 
-	DEBUG("Execute: Executing instruction %s, op#1: %lld, op#2: %lld - out: %lld\n", op_names[op_name], inp1, inp2, ALUout);
+	DEBUG( DEBUG_D, "Execute: Executing instruction %s, op#1: %lld, op#2: %lld - out: %lld\n", op_names[op_name], inp1, inp2, ALUout);
 
 	//write EXMEM_
 	EXMEM_.ALU_out=ALUout;
