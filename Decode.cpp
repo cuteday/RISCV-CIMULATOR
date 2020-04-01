@@ -27,7 +27,7 @@ void Simulator::ID()
     if(inst.OP==OPCODE_R)   // Func3, Func7
 	{
         // No imm
-        RegWrite = 1;
+        RegWrite = true;
 
         if (inst.fuc3 == F3_ADD && inst.fuc7 == F7_ADD){
             op_name = OP_ADD;
@@ -63,7 +63,7 @@ void Simulator::ID()
     {
         // 12bit signed imm
         Imm = inst.imm_i;
-        RegWrite = 1;
+        RegWrite = true;
         ALUSrc = 1;
 
         if (inst.fuc3 == F3_ADDI){
@@ -116,6 +116,7 @@ void Simulator::ID()
         ALUSrc = 1;
         MemRead = true;
         MemtoReg = true;
+        RegWrite = true;
 
         if(inst.fuc3==F3_LB){
             MemRead = 1;
@@ -129,13 +130,24 @@ void Simulator::ID()
         }else if(inst.fuc3 == F3_LD){
             MemRead = 8;
             op_name = OP_LW;
-        }else{ // Illegal Instruction
+        }else if(inst.fuc3 == F3_LBU){
+            MemRead = 1;
+            op_name = OP_LBU;
+        }else if(inst.fuc3 == F3_LHU){
+            MemRead = 2;
+            op_name = OP_LHU;
+        }else if(inst.fuc3 == F3_LWU){
+            MemRead = 4;
+            op_name = OP_LWU;
+        }
+        else{ // Illegal Instruction
             fprintf(stderr, "Invalid function3 code for LW\n");
         }
     }
     else if(inst.OP==OPCODE_SB) // beq, bne, blt, bge
     {
         // 13bit signed imm
+        // 
         Imm = inst.imm_sb;
         Branch = true;
 
@@ -152,12 +164,13 @@ void Simulator::ID()
         }
     }
     else if(inst.OP == OPCODE_ADDIW){
+        RegWrite = true;                // ommited T T
         Imm = inst.imm_i;
         ALUSrc = 1;
 
         op_name = OP_ADDIW;
     }
-    else if(inst.OP==OPCODE_JALR){    // Uncond Kirara Jump
+    else if(inst.OP==OPCODE_JALR){      // Uncond Kirara Jump
 
         Branch = true;
         RegWrite = true;
@@ -165,21 +178,24 @@ void Simulator::ID()
 
         op_name = OP_JALR;
     }
-    else if(inst.OP==OPCODE_UJ){   // JAL
+    else if(inst.OP==OPCODE_UJ){        // JAL
 
         Branch = true;
         RegWrite = true;
+        ALUSrc = 1;
         Imm = inst.imm_uj;
 
         op_name = OP_JAL;
     }
     else if (inst.OP == OPCODE_AUIPC)
-    {                                 
+    {
+        RegWrite = true;
         Imm = inst.imm_u;
         op_name = OP_AUIPC;
     }
     else if (inst.OP == OPCODE_LUI)
-    {                                
+    {
+        RegWrite = true;
         Imm = inst.imm_u;
         op_name = OP_LUI;
     }
@@ -193,18 +209,19 @@ void Simulator::ID()
         inst.rd = REG_A0;
     }
     else if (inst.OP == OPCODE_NOP){
-        
+        op_name = OP_NOP;
     }
-    else
-    { // Illegal Opcode
+    else{ // Illegal Opcode
         fprintf(stderr, "Invalid operation code...\n");
     }
+
     if(op_name == OP_INVALID){   
         fprintf(stderr, "Illegal Instuction 0x%08x. Halting > <\n", inst.inst);
         assert(false);
     }
 
-    DEBUG("leave a msg here  > < ");
+    DEBUG("Decode: Instruction %s found!  > < its IMM: %d\n", op_names[op_name], Imm);
+
     // Load Use 冒险检测
     if(IDEX.Ctrl_M_MemRead && 
         (IDEX.Rd == inst.rs || IDEX.Rd == inst.rt)){

@@ -13,7 +13,7 @@ Memory::Memory(int size):memsize(size){
 //-----------------------------------------
 
 ull Memory::ReadMem(int addr, int size, bool sign_ext){
-    DEBUG("Reading VA 0x%08x, size %d\n", addr, size);
+    
     assert((uint)addr + size < memsize);
     ull value;
     switch(size){
@@ -30,15 +30,15 @@ ull Memory::ReadMem(int addr, int size, bool sign_ext){
             value = *(ull *)(memory + addr);
             break;
         default:
-            fprintf(stderr, "Unsupported size for reading memory > <\n");
+            fprintf(stderr, "Unsupported size %d for reading memory > <\n", size);
             assert(false);
         }
-    
-    return value;
+        DEBUG("MemoryManager: Reading VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
+        return value;
 }
 
 void Memory::WriteMem(int addr, int size, ull value){
-    DEBUG("Writing VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
+    
     assert((uint)addr + size < memsize);
     switch(size){
         case 1:
@@ -54,8 +54,8 @@ void Memory::WriteMem(int addr, int size, ull value){
             memory[addr] = value;
             break;
         default:
-            fprintf(stderr, "Unsupported size for writing memory > <\n");
+            fprintf(stderr, "Unsupported size %d for writing memory > <\n", size);
             assert(false);
         }
-    
+    DEBUG("MemoryManager: Writing VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
 }

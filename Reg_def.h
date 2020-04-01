@@ -1,12 +1,18 @@
-#ifndef REG_DEF
-#define REG_DEF
+#pragma once
 #include "Utility.h"
 #include "Instruction.h"
 
 typedef unsigned long long REG;
 typedef long long REG_SIGNED;
 
+// quick notes
+
 // 流水线寄存器 * 4
+enum PIPELINE_STATE{
+  STATE_NORMAL,
+  STATE_STALL,
+  STATE_BUBBLE
+};
 
 struct IF_ID{
 	uint inst;
@@ -93,4 +99,3 @@ enum REG_NAME {
   REG_T6 = 31,
 };
 
-#endif

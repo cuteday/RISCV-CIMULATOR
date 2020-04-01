@@ -21,6 +21,8 @@ extern bool debug_on;
 extern void DEBUG(const char format[], ...);
 
 extern const char *op_names[];
+extern const char *reg_names[];
+extern const char *scall_names[];
 
 extern ull calc_mulh(ull a, ull b);
 

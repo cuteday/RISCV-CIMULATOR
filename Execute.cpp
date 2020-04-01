@@ -23,15 +23,15 @@ void Simulator::EX()
 	if(MEMWB.Ctrl_WB_RegWrite && MEMWB.Reg_dst){
 		if(MEMWB.Reg_dst == IDEX.Rs)
 			Reg_Rs = MEMWB.Ctrl_WB_MemtoReg? MEMWB.Mem_read : MEMWB.ALU_out;	// 可能来自ALU或内存
-		if(MEMWB.Reg_dst == IDEX.Rt && !IDEX.Ctrl_EX_ALUSrc)
+		if(MEMWB.Reg_dst == IDEX.Rt)
 			Reg_Rt = MEMWB.Ctrl_WB_MemtoReg? MEMWB.Mem_read : MEMWB.ALU_out;	// 操作数确实来自Rt...
 	}	// 顺序不能变: EXMEM的结果更新
-	if(MEMWB.Ctrl_WB_RegWrite && EXMEM.Reg_dst){
+	if(EXMEM.Ctrl_WB_RegWrite && EXMEM.Reg_dst){
 		// 这是ALU阶段的结果, 不是内存读取, 不需要stall...
 		if(!EXMEM.Ctrl_WB_MemtoReg){
 			if(EXMEM.Reg_dst == IDEX.Rs)
 				Reg_Rs = EXMEM.ALU_out;		// 就是刚出炉的ALU结果啦
-			if (EXMEM.Reg_dst == IDEX.Rt && !IDEX.Ctrl_EX_ALUSrc)
+			if (EXMEM.Reg_dst == IDEX.Rt)
 				Reg_Rt = EXMEM.ALU_out;	
 		}
 		// else :Load Use Harzard, need Stall #1
@@ -39,6 +39,8 @@ void Simulator::EX()
 		// bubble EX,  stall ID, IF
 
 	}
+
+
 	inp1 = Reg_Rs;
 	inp2 = IDEX.Ctrl_EX_ALUSrc ? Imm : Reg_Rt;	// choose Imm when ALUSrc == 1
 
@@ -104,6 +106,9 @@ void Simulator::EX()
 		case OP_LH:
 		case OP_LW:
 		case OP_LD:
+		case OP_LBU:
+		case OP_LHU:
+		case OP_LWU:
 		case OP_SB:
 		case OP_SH:
 		case OP_SW:
@@ -122,11 +127,11 @@ void Simulator::EX()
 
 		// Control Transfer ops starts here /!
 		case OP_JAL:
-			ALUout = Reg_PC;
+			ALUout = Reg_PC + 4;
 			Reg_PC = Reg_PC + Imm;
 			break;
 		case OP_JALR:
-			ALUout = Reg_PC;
+			ALUout = Reg_PC + 4;
 			Reg_PC = Reg_Rs + Imm;
 			break;
 
@@ -143,7 +148,7 @@ void Simulator::EX()
 			Reg_PC += Imm;
 			break;
 		case OP_BGE:
-			Branch &= inp1 > inp2;
+			Branch &= inp1 >= inp2;
 			Reg_PC += Imm;
 			break;
 
@@ -160,6 +165,8 @@ void Simulator::EX()
 			assert(op_name != OP_INVALID);
 			assert(false);
 	}
+
+	DEBUG("Execute: Executing instruction %s, op#1: %lld, op#2: %lld - out: %lld\n", op_names[op_name], inp1, inp2, ALUout);
 
 	//write EXMEM_
 	EXMEM_.ALU_out=ALUout;

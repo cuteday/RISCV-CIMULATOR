@@ -3,20 +3,33 @@ using namespace std;
 
 Simulator::Simulator(char* filename){
 	memset(this, 0, sizeof(Simulator));
+
+	fprintf(stdout, "Simulator built for %s... > < \n\n", filename);
+
 	elf = new ElfReader(filename, NULL);
 	mainMemory = new Memory(MEMSIZE);
+
+	load_memory();
 }
 
 void Simulator::bubble(STAGE_NAME stage){
+	// Corner case:
+	// 如果Mem阶段因为跳转发生了BUBBLE
+	// 但是Jxx的下1/2条(DEC/EXEC)中含有导致STALL的指令
+	// 那么BUBBLE会和STALL冲突
+	// BUBBLE会覆盖STALL.
 	switch (stage){
 	case STAGE_IF:
 		memset(&IFID_, 0, sizeof(IFID));
+		stall[STAGE_IF] = 0;
 		break;
 	case STAGE_ID:
 		memset(&IDEX_, 0, sizeof(IDEX));
+		stall[STAGE_ID] = 0;
 		break;
 	case STAGE_EX:
 		memset(&EXMEM_, 0, sizeof(EXMEM));
+		stall[STAGE_EX] = 0;
 		break;
 	default:
 		fprintf(stderr, "Bubble not expected > <\n");
@@ -48,8 +61,10 @@ void Simulator::load_memory(){
 
 void Simulator::simulate(){
 	//结束PC的设置
-	int end=(int)elf->endPC;
-	while(PC!=end){
+	int end = (int)elf->endPC;
+	while(PC != end + 1){
+
+		DEBUG("\nPipelined: New cycle!\n\n");
 
 		// 所有控制位需要恢复默认值
 		memset(&IFID_, 0, sizeof(IFID_));
@@ -63,7 +78,7 @@ void Simulator::simulate(){
 		ID();
 		EX();
 		MEM();
-		
+	
 		//更新中间寄存器
 		if (stall[STAGE_IF]){
 			PC -= 4;		// 本次PC保持不变
@@ -89,11 +104,12 @@ void Simulator::simulate(){
 //取指令
 void Simulator::IF(){
 	// if(IFID.stall) return;
+	// IMPORTANT: RISC-V中的相对跳转是对PC而不是PC+4
 
-	//write IFID_
+	DEBUG("InstFecth: Fetching instruction at PC 0x%08x\n", PC);
 	IFID_.inst = mainMemory->ReadMem(PC, 4);
+	IFID_.PC = PC; // 前传更新前的PC
 	PC += 4;
-	IFID_.PC = PC; // 前传更新后的PC (PC+1)
 }
 
 //访问存储器
@@ -115,6 +131,7 @@ void Simulator::MEM(){
 		bubble(STAGE_IF);
 		bubble(STAGE_ID);
 		bubble(STAGE_EX);
+		DEBUG("***MEM: Jump! to PC 0x%08x\n", PC);
 	}
 
 	//read / write memory
@@ -139,26 +156,37 @@ void Simulator::WB(){
 	// read MEMWB
 	char RegWrite = MEMWB.Ctrl_WB_RegWrite;
 	char MemtoReg = MEMWB.Ctrl_WB_MemtoReg;
-	REG ALU_out = MEMWB_.ALU_out;
-	REG Mem_read = MEMWB_.Mem_read;
+	REG ALU_out = MEMWB.ALU_out;
+	REG Mem_read = MEMWB.Mem_read;
 
 	uint Reg_dst = MEMWB.Reg_dst;
 
-	if(RegWrite && Reg_dst)	//write reg
-		reg[Reg_dst] = MemtoReg ? Mem_read : ALU_out;
+	if(RegWrite && Reg_dst){	//write reg
+		
+		REG write_val = MemtoReg ? Mem_read : ALU_out;
+		reg[Reg_dst] = write_val;
+		DEBUG("WriteBack: Writing value 0x%016llx to reg %s\n", write_val, reg_names[Reg_dst]);
+	}
 }
 
 REG_SIGNED Simulator::Syscall(SYSCALL_NAME type, REG arg){
+
+	DEBUG("Transfer control to kernel: Syscall\n");
+	DEBUG("Syscall %s, ARG0: %lld\n", scall_names[type], arg);
+
 	REG_SIGNED ret = 0;
 	switch(type){
 		case SYSCALL_EXIT:
 			exit_flag = true;
 			break;
 		case SYSCALL_PRINTC:
-			fprintf(stdout, "%c", (char)arg);
+			fprintf(stdout, "%c", (char)arg);fflush(stdout);
 			break;
 		case SYSCALL_PRINTD:
-			fprintf(stdout, "%d", (int)arg);
+			fprintf(stdout, "%d", (int)arg);fflush(stdout);
+			break;
+		case SYSCALL_PRINTS:
+			fprintf(stdout, "%s", mainMemory->memory + (int)arg);fflush(stdout);
 			break;
 		case SYSCALL_GETC:
 			ret = getchar();

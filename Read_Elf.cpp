@@ -1,7 +1,8 @@
 #include"Read_Elf.h"
 
-ElfReader::ElfReader(const char filename[], const char elfname[]){
+ElfReader::ElfReader(const char filename[], const char elfname_[]){
 	// print to stdout bu default
+	elfname = elfname_;
 	file = fopen(filename, "r");
 	if(elfname == NULL)
 		// elf = stdin;
@@ -10,6 +11,7 @@ ElfReader::ElfReader(const char filename[], const char elfname[]){
 		elf = fopen(elfname, "rw");
 	assert(file != NULL);
 	assert(elf != NULL);
+	read_elf();
 }
 
 void ElfReader::read_elf(){
@@ -25,7 +27,9 @@ void ElfReader::read_elf(){
 	fprintf(elf,"\n\nSymbol table:\n");
 	read_symtable();
 
-	fclose(elf);
+	parse_results();
+
+	if(elfname)fclose(elf);
 }
 
 void ElfReader::read_Elf_header(){
@@ -131,11 +135,13 @@ void ElfReader::read_Phdr(){
 		fprintf(elf," Align: 0x%llx\n", *(ull*)&elf64_phdr.p_align);
 
 		if (*(uint*)&elf64_phdr.p_flags == 0x05 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
-            cadr = *(ull*)&elf64_phdr.p_offset;
+			
+			cadr = *(ull*)&elf64_phdr.p_offset;
             csize = *(ull*)&elf64_phdr.p_filesz;
             cvadr = *(ull*)&elf64_phdr.p_vaddr;
         }
 		if (*(uint*)&elf64_phdr.p_flags == 0x06 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
+			
             dadr = *(ull*)&elf64_phdr.p_offset;
             dsize = *(ull*)&elf64_phdr.p_filesz;
 			dvadr = *(ull*)&elf64_phdr.p_vaddr;
@@ -156,10 +162,10 @@ void ElfReader::read_symtable(){
 		char *sym_name = str_table + *(uint *)&elf64_sym.st_name;
 		//file should be relocated
 		fprintf(elf," Name:   %-20s  ", sym_name);
-		fprintf(elf," Bind: %d ", *(uint*)&elf64_sym.st_info>>4);
+		fprintf(elf," Bind: %012x ", *(uint*)&elf64_sym.st_info>>4);
 		fprintf(elf," Type: %d ", *(uint*)&elf64_sym.st_info&0xf);
-		fprintf(elf,"  NDX: %-4hu", *(ushort*)&elf64_sym.st_shndx);
-        fprintf(elf,"  Size: %-16llu", *(ull*)&elf64_sym.st_size);
+		fprintf(elf,"  NDX: %-6hu", *(ushort*)&elf64_sym.st_shndx);
+        fprintf(elf,"  Size: 0x%-16llx", *(ull*)&elf64_sym.st_size);
         fprintf(elf,"  Value: %016llx\n", *(ull*)&elf64_sym.st_value);
 
 		if(!strcmp(sym_name, "main")){
@@ -173,3 +179,9 @@ void ElfReader::read_symtable(){
 }
 
 
+void ElfReader::parse_results(){
+	fprintf(elf, "Elf parsing results:\n");
+	fprintf(elf, "entry: %08x, endPC: %08x\n", entry, endPC);
+	fprintf(elf, "data section: 0x%08x, size: 0x%05x, at file 0x%08x\n", dvadr, dsize, dadr);
+	fprintf(elf, "code section: 0x%08x, size: 0x%05x, at file 0x%08x\n", cvadr, csize, cadr);
+}
