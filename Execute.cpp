@@ -105,6 +105,9 @@ void Simulator::EX()
 		case OP_SUBW:
 			ALUout = REG_SIGNED(int(inp1) - int(inp2));
 			break;
+		case OP_MULW:
+			ALUout = REG_SIGNED(int(inp1) * int(inp2));
+			break;
 		case OP_SLLW:
 		case OP_SLLIW:
 			ALUout = REG_SIGNED(uint(inp1) << (inp2 & 0x1f));

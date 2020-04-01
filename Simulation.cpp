@@ -4,7 +4,7 @@ using namespace std;
 Simulator::Simulator(char* filename){
 	memset(this, 0, sizeof(Simulator));
 
-	fprintf(stdout, "Simulator built for %s... > < \n", filename);
+	fprintf(stdout, "Simulator built for %s... ^ ^ \n", filename);
 
 	elf = new ElfReader(filename);
 	mainMemory = new Memory(MEMSIZE);

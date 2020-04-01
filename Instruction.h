@@ -92,6 +92,7 @@ enum OP_NAME{
     // 32-bit ops
     OP_ADDW,
     OP_SUBW,
+    OP_MULW,
     OP_SLLW,
     OP_SRLW,
     OP_SRAW,

@@ -121,6 +121,7 @@ const char *op_names[] = {
 
     "addw",
     "subw",
+    "mulw",
     "sllw",
     "srlw",
     "sraw",

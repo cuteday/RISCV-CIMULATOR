@@ -4,3 +4,4 @@ run
 sort
 tests/*
 *.txt
+.DS_Store

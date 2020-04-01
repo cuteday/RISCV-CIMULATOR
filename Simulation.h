@@ -20,6 +20,10 @@
 // 如何处理系统调用?
 // 使用内联汇编改写系统调用
 
+// # 易错点整理
+// 相对跳转是相对于PC （而非PC+4） 
+// GreenCard中的所有指令中的立即数都需要进行符号扩展 
+
 enum STAGE_NAME{
     STAGE_IF,
     STAGE_ID,
@@ -126,6 +130,7 @@ private:
 #define F7_AND  0
 
 #define F7_ADDW 0
+#define F7_MULW 0x1
 #define F7_SUBW 0x20
 #define F7_SLLW 0
 #define F7_SRLW 0

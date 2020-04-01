@@ -229,6 +229,8 @@ void Simulator::ID()
         if(inst.fuc3 == F3_ADDW){
             if(inst.fuc7 == F7_ADDW){
                 op_name = OP_ADDW;
+            }else if(inst.fuc7 == F7_MULW){
+                op_name = OP_MULW;
             }else if(inst.fuc7 == F7_SUBW){
                 op_name = OP_SUBW;
             }else{
