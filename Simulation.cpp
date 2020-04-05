@@ -3,13 +3,37 @@ using namespace std;
 
 Simulator::Simulator(char* filename){
 	memset(this, 0, sizeof(Simulator));
-
 	fprintf(stdout, "Simulator built for %s... ^ ^ \n", filename);
 
+	logger = new Logger();
 	elf = new ElfReader(filename);
 	mainMemory = new Memory(MEMSIZE);
 
 	load_memory();
+}
+
+int Simulator::ExecuteTime(OP_NAME op){
+	int cycles;
+	switch (op){
+	case OP_MUL:
+	case OP_DIV:
+	case OP_REM:
+	case OP_MULH:
+		cycles = 3;
+		break;
+	case OP_MULW:
+		cycles = 2;
+		break;
+	default:
+		cycles = 1;
+	}
+	return cycles;
+}
+
+void Simulator::stall(STAGE_NAME stage){
+	assert(0 <= stage && stage < NUM_STAGES);
+	if(state[stage]!=REG_BUBBLE)
+		state[stage] = REG_STALL;
 }
 
 void Simulator::bubble(STAGE_NAME stage){
@@ -21,37 +45,37 @@ void Simulator::bubble(STAGE_NAME stage){
 	switch (stage){
 	case STAGE_IF:
 		memset(&IFID_, 0, sizeof(IFID));
-		stall[STAGE_IF] = 0;
 		break;
 	case STAGE_ID:
 		memset(&IDEX_, 0, sizeof(IDEX));
-		stall[STAGE_ID] = 0;
 		break;
 	case STAGE_EX:
 		memset(&EXMEM_, 0, sizeof(EXMEM));
-		stall[STAGE_EX] = 0;
 		break;
 	default:
 		fprintf(stderr, "Bubble not expected > <\n");
 		assert(false);
 		break;
 	}
+	state[stage] = REG_BUBBLE;
 }
 
 void Simulator::load_memory(){
-	// 没错 就是简单的线性映射(转换？)
-	// Load code segment
-	fseek(elf->file, elf->cadr, 0);
-	fread(mainMemory->memory + elf->cvadr, 1, elf->csize, elf->file);
-	// Load data segment
-	fseek(elf->file, elf->dadr, 0);
-	fread(mainMemory->memory + elf->dvadr, 1, elf->dsize, elf->file);
+	// 直接把物理地址当虚拟地址了
+
+	mainMemory->offset = elf->mem_offset;
+	for (int i = 0; i < elf->phdrs.size();i++){
+		Elf64_Phdr& elf64_phdr = elf->phdrs[i];
+		fseek(elf->file, *(ull *)&elf64_phdr.p_offset, 0);
+		fread(mainMemory->memory + *(ull *)&elf64_phdr.p_vaddr - mainMemory->offset, 1, *(ull*)&elf64_phdr.p_filesz, elf->file);
+	}
 
 	//设置入口地址
 	PC = elf->entry;
 	//设置全局数据段地址寄存器
 	reg[REG_GP] = elf->gp;
-	reg[REG_SP] = MEMSIZE / 2; //栈基址 （sp寄存器）
+	reg[REG_SP] = MEMSIZE / 2 + mainMemory->offset; //栈基址 （sp寄存器）
+	
 }
 
 // 针对数据冒险，已经：
@@ -65,7 +89,7 @@ void Simulator::simulate(){
 	int end = (int)elf->endPC;
 	while(PC != end + 1){
 
-		DEBUG( DEBUG_D, "\nPipelined: New cycle!\n\n");
+		DEBUG( DEBUG_P, "\n----------- Pipelined: New cycle! -----------\n\n");
 
 		// 所有控制位需要恢复默认值
 		memset(&IFID_, 0, sizeof(IFID_));
@@ -74,32 +98,34 @@ void Simulator::simulate(){
 		memset(&MEMWB_, 0, sizeof(MEMWB_));
 		
 		// 运行
-		WB();	// Write Back First?
+		WB();	// Write Back Reg before Reg Read...
 		IF();
 		ID();
 		EX();
 		MEM();
 	
 		//更新中间寄存器
-		if (stall[STAGE_IF]){
+		if (state[STAGE_IF] == REG_STALL)
 			PC -= 4;		// 本次PC保持不变
-			stall[STAGE_IF]--;
-		}
-		if(!stall[STAGE_ID])
+		if(state[STAGE_ID] != REG_STALL)
 			IFID = IFID_;
-		else stall[STAGE_ID]--;
-		if(!stall[STAGE_EX])
+		if(state[STAGE_EX] != REG_STALL)
 			IDEX = IDEX_;
-		else stall[STAGE_EX]--;
 		EXMEM=EXMEM_;
 		MEMWB=MEMWB_;
 
-        if(exit_flag==1)
-            break;
-		
-        // reg[REG_ZERO] = 0;	//一直为零, 不必要 因为禁止对该寄存器进行更改...
+		for (int i = 0; i < NUM_STAGES;i++)
+			state[i] = REG_NORMAL;
+
+		if (exit_flag == 1)
+			break;
+
+		SingleStep();
+		// reg[REG_ZERO] = 0;	//一直为零, 不必要 因为禁止对该寄存器进行更改...
 	}
-	fprintf(stdout, "\n\nProgram finished, halting... > <\n");
+	fprintf(stdout, "\n\nProgram finished. Halting... > <\n");
+	reg.printInfo();
+	logger->printResults();
 }
 
 //取指令
@@ -107,7 +133,8 @@ void Simulator::IF(){
 	// if(IFID.stall) return;
 	// IMPORTANT: RISC-V中的相对跳转是对PC而不是PC+4
 
-	DEBUG(DEBUG_D, "InstFecth: Fetching instruction at PC 0x%08x\n", PC);
+	DEBUG(DEBUG_P, "IF :\tFetching instruction at PC 0x%08x\n", PC);
+
 	IFID_.inst = mainMemory->ReadMem(PC, 4);
 	IFID_.PC = PC; // 前传更新前的PC
 	PC += 4;
@@ -127,19 +154,26 @@ void Simulator::MEM(){
 	// complete Branch instruction PC change 
 	// 现在的跳转策略: Always not taken, 在MEM阶段修正
 	// bubble IF ID EX
-	if(Branch){
-		PC = EXMEM.PC;		// next pc
-		bubble(STAGE_IF);
-		bubble(STAGE_ID);
-		bubble(STAGE_EX);
-		DEBUG( DEBUG_D, "***MEM: Jump! to PC 0x%08x\n", PC);
-	}
+	// if(Branch){
+	// 	PC = EXMEM.PC;		// next pc
+	// 	bubble(STAGE_IF);
+	// 	bubble(STAGE_ID);
+	// 	bubble(STAGE_EX);
+	// 	DEBUG( DEBUG_V, "***MEM: Jump! to PC 0x%08x\n", PC);
+	// 	logger->numControlHazards++;
+	// }
 
 	//read / write memory
-	if(ReadLen)
+	if(ReadLen){
+		DEBUG(DEBUG_P, "MEM:\tReading %d byte at vaddr 0x%08x\n", ReadLen, ALU_out);
 		Mem_read = mainMemory->ReadMem(ALU_out, ReadLen);
-	if(WriteLen)
+		logger->numCycles += 3;
+	}
+	if(WriteLen){
+		DEBUG(DEBUG_P, "MEM:\tWriting %d byte at vaddr 0x%08x, value 0x%-8x\n", ReadLen, ALU_out, Reg_Rt);
 		mainMemory->WriteMem(ALU_out, WriteLen, Reg_Rt);
+		logger->numCycles += 3;
+	}
 
 	//write MEMWB_
 	MEMWB_.Mem_read = Mem_read;
@@ -163,17 +197,17 @@ void Simulator::WB(){
 	uint Reg_dst = MEMWB.Reg_dst;
 
 	if(RegWrite && Reg_dst){	//write reg
-		
 		REG write_val = MemtoReg ? Mem_read : ALU_out;
 		reg[Reg_dst] = write_val;
-		DEBUG( DEBUG_D, "WriteBack: Writing value 0x%016llx to reg %s\n", write_val, reg_names[Reg_dst]);
+		DEBUG(DEBUG_P, "WB :\tWriting value 0x%016llx to reg %s\n", write_val, reg_names[Reg_dst]);
 	}
 }
 
 REG_SIGNED Simulator::Syscall(SYSCALL_NAME type, REG arg){
 
-	DEBUG( DEBUG_D, "Transfer control to kernel: Syscall\n");
-	DEBUG( DEBUG_D, "Syscall %s, ARG0: %lld\n", scall_names[type], arg);
+	DEBUG( DEBUG_V, "Transfer control to kernel: Syscall\n");
+	DEBUG( DEBUG_V, "Syscall %s, ARG0: %lld\n", scall_names[type], arg);
+	logger->numCycles += 5;
 
 	REG_SIGNED ret = 0;
 	switch(type){
@@ -200,4 +234,33 @@ REG_SIGNED Simulator::Syscall(SYSCALL_NAME type, REG arg){
 			assert(false);
 	}
 	return ret;
+}
+
+void Simulator::SingleStep(){
+	if(!debug_on[DEBUG_D])
+		return;
+	char c = 'N';
+	bool print_reg = false, dump_mem = false;
+
+	while(true){
+		puts("");
+		if(!print_reg)fprintf(stdout, "Type 'r' to print REG info, ");
+		if(!dump_mem)fprintf(stdout, "Type 'd' to dump memory, ");
+		fprintf(stdout, "Type ENTER to CONTINUE \n");
+
+		while(c!='\n'&&(c!='r'||print_reg)&&(c!='d'||dump_mem)){
+			c = getchar();fflush(stdin);
+		}
+		if(c=='\n')
+			break;
+		else if(c=='r'){
+			reg.printInfo();
+			print_reg = true;
+		}
+		else if(c=='d'){
+			mainMemory->DumpMem();
+			dump_mem = true;
+		}
+		c = 'N';
+	}
 }

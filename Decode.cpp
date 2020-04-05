@@ -15,7 +15,6 @@ void Simulator::ID()
     int Imm = 0;
 
     char RegDst = 0;    // write to rd? / rt?
-    char ALUop = 0;     // add / sub / mul / div / 
     char ALUSrc = 0;    // ALU op2 from rt? / imm?
     char Branch = 0;    //
     char MemRead = 0;   //
@@ -266,14 +265,15 @@ void Simulator::ID()
         assert(false);
     }
 
-    DEBUG( DEBUG_D, "Decode: Instruction %s found!  > < its IMM: %d\n", op_names[op_name], Imm);
+    DEBUG( DEBUG_P, "ID :\tInstruction %s found!  > < its IMM: %d\n", op_names[op_name], Imm);
 
     // Load Use 冒险检测
     if(IDEX.Ctrl_M_MemRead && 
         (IDEX.Rd == inst.rs || IDEX.Rd == inst.rt)){
             // Stall IF ID
-            stall[STAGE_IF] = 1;
-            stall[STAGE_ID] = 1;
+            logger->numLoadUseHazards++;
+            stall(STAGE_IF);
+            stall(STAGE_ID);
             bubble(STAGE_EX);
             return;
     }
@@ -291,7 +291,6 @@ void Simulator::ID()
     IDEX_.PC = IFID.PC;             // forward PC+4
 	//...
 
-	IDEX_.Ctrl_EX_ALUOp=ALUop;
     IDEX_.Ctrl_EX_ALUSrc = ALUSrc;
     IDEX_.Ctrl_EX_RegDst = RegDst;
 

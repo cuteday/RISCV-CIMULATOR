@@ -3,10 +3,12 @@
 class Memory{
 public:
     Memory(int size = 1000000);
-
-    ull ReadMem(int addr, int size, bool sign_ext = true);
-    void WriteMem(int addr, int size, ull value);
+    ull Translate(int vaddr);
+    ull ReadMem(int vaddr, int size, bool sign_ext = true);
+    void WriteMem(int vaddr, int size, ull value);
+    void DumpMem(const char filename[] = "./memoryDump");
 
     char* memory;
-    uint memsize;
+    ull memsize;
+    ull offset;
 };

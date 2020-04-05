@@ -2,10 +2,30 @@
 #include "Utility.h"
 #include "Instruction.h"
 
+#define NUM_STAGES  5
+#define NUM_REGS    32
+
 typedef unsigned long long REG;
 typedef long long REG_SIGNED;
 
-// quick notes
+class Regs{
+public:
+  Regs() { memset(reg, 0, sizeof(reg)); }
+  REG& operator [] (int idx){
+    assert(0 <= idx && idx < 32);
+    return reg[idx]; 
+  }
+  void printInfo(){
+    fprintf(stdout, "---------------------Reg Info---------------------\n");
+    for (int i = 0; i < NUM_REGS; i++)
+      fprintf(stdout, "Reg %-4s:  0x%016llx \n", reg_names[i], reg[i]);
+    puts("");
+  }
+
+private:
+  REG reg[32];
+};
+
 
 // 流水线寄存器 * 4
 enum PIPELINE_STATE{
@@ -28,7 +48,6 @@ struct ID_EX{
 
 	// control bit * 8
 	char Ctrl_EX_ALUSrc;
-	char Ctrl_EX_ALUOp;
 	char Ctrl_EX_RegDst;
 
 	char Ctrl_M_Branch;

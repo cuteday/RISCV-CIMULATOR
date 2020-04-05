@@ -1,6 +1,6 @@
 #include "Utility.h"
 
-bool debug_on[2];
+bool debug_on[5];
 void DEBUG(DEBUG_MODE mode, const char format[], ...){
     // 变长参数用于调试...!
     if(debug_on[mode]){
@@ -11,6 +11,21 @@ void DEBUG(DEBUG_MODE mode, const char format[], ...){
     }
 }
 
+Logger::Logger() { memset(this, 0, sizeof(Logger)); }
+
+void Logger::printResults(){
+    numDataHarzards = numDataForwards + numLoadUseHazards;
+    fprintf(stdout, "-------------------Simulator History--------------------\n");
+    fprintf(stdout, "Total instructions: %d\n", numInsts);
+    fprintf(stdout, "Total CPU cycles: %d\n", numCycles);
+    fprintf(stdout, "Average CPI: %.1f\n", (float)numCycles / numInsts);
+    fprintf(stdout, "Control harzards happened: %d\n", numControlHazards);
+    fprintf(stdout, "Data harzards happended: %d, among which:\n", numDataHarzards);
+    fprintf(stdout, "%d used Data Bypass to avoid stalling, but...\n", numDataForwards);
+    fprintf(stdout, "%d of them are Load/Use harzards.\n", numLoadUseHazards);
+    fprintf(stdout, "Thanks for using and have a nice day! ｄ(･∀･*)♪ﾟ\n\n");
+}
+
 ArgParser *args;
 ArgParser::ArgParser(int argc, char *argv[]){
     memset(this, 0, sizeof(ArgParser));
@@ -18,35 +33,50 @@ ArgParser::ArgParser(int argc, char *argv[]){
     for (int i = 0; i < argc;i++){
         if(!strcmp(argv[i], "-f")){
             if(i == argc - 1){
-                fprintf(stderr, "Specify a executable file.\n");
+                fprintf(stderr, "Executable not specified!\n");
                 printError();
             }
             test_file = argv[++i];
         }
-        if(!strcmp(argv[i], "-d")){
-            print_debug = true;
+        else if(!strcmp(argv[i], "-d")){
+            single_step = true;
+            print_pipelined = true;
         }
-        if(!strcmp(argv[i], "-e")){
+        else if(!strcmp(argv[i], "-v")){
+            print_verbose = true;
+            print_pipelined = true;
+        }
+        else if(!strcmp(argv[i], "-e")){
             print_elf = true;
         }
-        if(!strcmp(argv[i], "-h")){
+        else if(!strcmp(argv[i], "-p")){
+            print_pipelined = true;
+        }
+        else if(!strcmp(argv[i], "-h")){
             printHelp();
         }
+    }
+    if(test_file == NULL){
+        fprintf(stderr, "Executable not specified!\n");
+        printError();
     }
 }
 
 void ArgParser::printHelp(){
     printf("Usage: \n");
     printf("    -f [risc-v64 file]: run executable in simulator\n");
-    printf("    -d print debug impormation for simulator\n");
-    printf("    -e print elf file parsing results\n");
-
-    printf("    -h help information\n");
+    printf("Optional: \n");
+    printf("    -d run in single-step mode for debugging\n");
+    printf("    -v print debug imformation for simulator (verbose)\n");
+    printf("    -e print elf file parsing results before running\n");
+    printf("Help: \n");
+    printf("    -h help information\n\n");
+    exit(0);
 }
 
 void ArgParser::printError(){
     fprintf(stderr, "Incorrect argument format > <\n");
-    fprintf(stderr, "run with -h for help.\n");
+    fprintf(stderr, "run with -h for help.\n\n");
     assert(false);
 }
 

@@ -5,6 +5,11 @@ Memory::Memory(int size):memsize(size){
     memset(memory, 0, size);
 }
 
+ull Memory::Translate(int vaddr){
+    // paddr + offset = vaddr
+    return vaddr - offset;
+}
+
 //-----------------------------------------
 //  符号扩展signed ext:
 //  仅与扩展前的类型有关
@@ -12,8 +17,9 @@ Memory::Memory(int size):memsize(size){
 //  若扩展前为signed 则一定是符号扩展, 即使是转换为unsigned
 //-----------------------------------------
 
-ull Memory::ReadMem(int addr, int size, bool sign_ext){
-    
+ull Memory::ReadMem(int vaddr, int size, bool sign_ext){
+
+    int addr = Translate(vaddr);
     assert((uint)addr + size < memsize);
     ull value;
     switch(size){
@@ -33,12 +39,13 @@ ull Memory::ReadMem(int addr, int size, bool sign_ext){
             fprintf(stderr, "Unsupported size %d for reading memory > <\n", size);
             assert(false);
         }
-        DEBUG( DEBUG_D, "MemoryManager: Reading VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
+        DEBUG( DEBUG_V, "MemoryManager: Reading VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
         return value;
 }
 
-void Memory::WriteMem(int addr, int size, ull value){
+void Memory::WriteMem(int vaddr, int size, ull value){
     
+    int addr = Translate(vaddr);
     assert((uint)addr + size < memsize);
     switch(size){
         case 1:
@@ -57,5 +64,14 @@ void Memory::WriteMem(int addr, int size, ull value){
             fprintf(stderr, "Unsupported size %d for writing memory > <\n", size);
             assert(false);
         }
-    DEBUG( DEBUG_D, "MemoryManager: Writing VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
+    DEBUG( DEBUG_V, "MemoryManager: Writing VA 0x%08x, size %d, value 0x%llx\n", addr, size, value);
+}
+
+
+void Memory::DumpMem(const char filename[]){
+    FILE *file = fopen(filename, "w");
+    //for (int i = 0; i < memsize;i++)
+    fwrite(memory, 1, memsize, file);
+    fclose(file);
+    fprintf(stdout, "Memory dumped to %s \n", filename);
 }

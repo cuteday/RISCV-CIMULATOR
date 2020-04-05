@@ -5,7 +5,6 @@
 #include "Instruction.h"
 #include "Memory.h"
 
-#define NUM_STAGES 5
 #define MEMSIZE 10000000
 
 // 课堂摸鱼笔记
@@ -43,32 +42,29 @@ enum SYSCALL_NAME{
     SYSCALL_GETD,
 };
 
+enum REG_STATE{
+    REG_NORMAL,
+    REG_STALL,
+    REG_BUBBLE
+};
+
 class Simulator{
 public:
-
     Simulator(char* filename);
     void load_memory();
     void simulate();    
     
 private:
-
     ElfReader *elf; // 可执行文件解析
-    
-    //unsigned int memory[MAX];
-    Memory* mainMemory;
-    //寄存器堆
-    REG reg[32];
-    //PC
+    Logger *logger;	// 性能记录
+
+    Memory* mainMemory;	// 主存
+    Regs reg;				// 寄存器堆
     int PC;
-    uchar stall[NUM_STAGES];
+    REG_STATE state[NUM_STAGES];
+    int exit_flag;      //系统调用退出指示
 
-    //指令运行数
-    long long inst_num;
-    //系统调用退出指示
-    int exit_flag;
-
-    // 流水线寄存器们
-    IF_ID IFID, IFID_;
+    IF_ID IFID, IFID_; 	    // 流水线寄存器们
     ID_EX IDEX, IDEX_;
     EX_MEM EXMEM, EXMEM_;
     MEM_WB MEMWB, MEMWB_;
@@ -78,8 +74,11 @@ private:
     void MEM();
     void WB();
 
+    int ExecuteTime(OP_NAME op);	// ALU周期计算
+    void SingleStep();						// 单步调试
     void bubble(STAGE_NAME stage);
-    REG_SIGNED Syscall(SYSCALL_NAME type, REG arg);
+    void stall(STAGE_NAME stage);
+    REG_SIGNED Syscall(SYSCALL_NAME type, REG arg);	// syscall handler
 };
 
 

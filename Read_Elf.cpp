@@ -4,6 +4,7 @@ ElfReader::ElfReader(const char filename[]){
 	// print to stdout by default
 	file = fopen(filename, "r");
 	elf = stdout;
+	mem_offset = 0x7FFFFFFF;
 
 	assert(file != NULL);
 	assert(elf != NULL);
@@ -130,18 +131,15 @@ void ElfReader::read_Phdr(){
         DEBUG(DEBUG_E," MemSiz: 0x%016llx", *(ull*)&elf64_phdr.p_memsz);
 		DEBUG(DEBUG_E," Align: 0x%llx\n", *(ull*)&elf64_phdr.p_align);
 
-		if (*(uint*)&elf64_phdr.p_flags == 0x05 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
+		mem_offset = min((ull)mem_offset, *(ull *)&elf64_phdr.p_vaddr);
+		phdrs.push_back(elf64_phdr);
+
+		// if (*(uint*)&elf64_phdr.p_flags == 0x05 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
 			
-			cadr = *(ull*)&elf64_phdr.p_offset;
-            csize = *(ull*)&elf64_phdr.p_filesz;
-            cvadr = *(ull*)&elf64_phdr.p_vaddr;
-        }
-		if (*(uint*)&elf64_phdr.p_flags == 0x06 && *(uint*)&elf64_phdr.p_type == PT_LOAD){
-			
-            dadr = *(ull*)&elf64_phdr.p_offset;
-            dsize = *(ull*)&elf64_phdr.p_filesz;
-			dvadr = *(ull*)&elf64_phdr.p_vaddr;
-        }
+		// 	cadr = *(ull*)&elf64_phdr.p_offset;
+        //     csize = *(ull*)&elf64_phdr.p_filesz;
+        //     cvadr = *(ull*)&elf64_phdr.p_vaddr;
+        // }
 	}
 }
 
@@ -178,6 +176,5 @@ void ElfReader::read_symtable(){
 void ElfReader::parse_results(){
 	DEBUG(DEBUG_E, "Elf parsing results:\n");
 	DEBUG(DEBUG_E, "entry: %08x, endPC: %08x\n", entry, endPC);
-	DEBUG(DEBUG_E, "data section: 0x%08x, size: 0x%05x, at file 0x%08x\n", dvadr, dsize, dadr);
-	DEBUG(DEBUG_E, "code section: 0x%08x, size: 0x%05x, at file 0x%08x\n", cvadr, csize, cadr);
+	// DEBUG(DEBUG_E, "code section: 0x%08x, size: 0x%05x, at file 0x%08x\n", cvadr, csize, cadr);
 }

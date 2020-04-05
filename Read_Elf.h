@@ -2,6 +2,7 @@
 #include<cstring>
 #include<cassert>
 #include "Utility.h"
+using namespace std;
 
 // 单独处理nop
 // 认为nop == addi x0 x0
@@ -150,16 +151,13 @@ public:
 	unsigned int endPC;
 	//程序的入口地址
 	unsigned int entry;
-
-	unsigned int dadr;
-	unsigned int dsize;
-	unsigned int dvadr;
-
+	unsigned int mem_offset;
 
 	//Program headers
 	ull padr;
 	unsigned int psize;
 	unsigned int pnum;
+	std::vector<Elf64_Phdr> phdrs;	// 供加载内存时使用
 	//Section Headers
 	ull sadr;
 	unsigned int ssize;

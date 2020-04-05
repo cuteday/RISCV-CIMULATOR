@@ -13,39 +13,41 @@ void Simulator::EX()
 	REG_SIGNED inp1, inp2;
 	REG_SIGNED Reg_Rs = IDEX.Reg_Rs, Reg_Rt = IDEX.Reg_Rt;
 	int Reg_PC = IDEX.PC;
-	
-
-	//Branch PC calulate
-	//...
 
 	// choose ALU input operands
 	// THIS is a data bypass - DATA HAZARD 
 	if(MEMWB.Ctrl_WB_RegWrite && MEMWB.Reg_dst){
-		if(MEMWB.Reg_dst == IDEX.Rs)
+		if(MEMWB.Reg_dst == IDEX.Rs){
 			Reg_Rs = MEMWB.Ctrl_WB_MemtoReg? MEMWB.Mem_read : MEMWB.ALU_out;	// 可能来自ALU或内存
-		if(MEMWB.Reg_dst == IDEX.Rt)
+			logger->numDataForwards++;
+		}
+		if(MEMWB.Reg_dst == IDEX.Rt){
 			Reg_Rt = MEMWB.Ctrl_WB_MemtoReg? MEMWB.Mem_read : MEMWB.ALU_out;	// 操作数确实来自Rt...
+			logger->numDataForwards++;
+		}
 	}	// 顺序不能变: EXMEM的结果更新
 	if(EXMEM.Ctrl_WB_RegWrite && EXMEM.Reg_dst){
 		// 这是ALU阶段的结果, 不是内存读取, 不需要stall...
 		if(!EXMEM.Ctrl_WB_MemtoReg){
-			if(EXMEM.Reg_dst == IDEX.Rs)
+			if(EXMEM.Reg_dst == IDEX.Rs){
 				Reg_Rs = EXMEM.ALU_out;		// 就是刚出炉的ALU结果啦
-			if (EXMEM.Reg_dst == IDEX.Rt)
+				logger->numDataForwards++;
+			}
+			if (EXMEM.Reg_dst == IDEX.Rt){
 				Reg_Rt = EXMEM.ALU_out;	
+				logger->numDataForwards++;
+			}
 		}
 		// else :Load Use Harzard, need Stall #1
 		// Detected in ID
 		// bubble EX,  stall ID, IF
-
 	}
-
+	logger->numInsts += op_name != OP_NOP;
 
 	inp1 = Reg_Rs;
 	inp2 = IDEX.Ctrl_EX_ALUSrc ? Imm : Reg_Rt;	// choose Imm when ALUSrc == 1
 
 	//alu calculate
-	int Zero;
 	REG ALUout;
 
 	switch(op_name){
@@ -185,7 +187,16 @@ void Simulator::EX()
 			assert(false);
 	}
 
-	DEBUG( DEBUG_D, "Execute: Executing instruction %s, op#1: %lld, op#2: %lld - out: %lld\n", op_names[op_name], inp1, inp2, ALUout);
+	DEBUG( DEBUG_P, "EX :\tExecuting instruction %s, op#1: %lld, op#2: %lld - out: %lld\n", op_names[op_name], inp1, inp2, ALUout);
+	logger->numCycles += ExecuteTime(op_name);
+
+	if(Branch){
+		PC = Reg_PC; // next pc
+		bubble(STAGE_IF);
+		bubble(STAGE_ID);
+		DEBUG(DEBUG_P, "EX :\tJump to PC 0x%08x ***\n", PC);
+		logger->numControlHazards++;
+	}
 
 	//write EXMEM_
 	EXMEM_.ALU_out=ALUout;

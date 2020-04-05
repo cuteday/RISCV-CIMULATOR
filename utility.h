@@ -8,6 +8,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <cstdarg>
+#include <vector>
 
 #define FALSE false
 #define TRUE true
@@ -21,15 +22,19 @@ typedef unsigned short ushort;
 enum DEBUG_MODE{
     DEBUG_D,
     DEBUG_E,
+    DEBUG_V,
+    DEBUG_P,
 };
 
-extern bool debug_on[2];
+extern bool debug_on[5];
 extern void DEBUG(DEBUG_MODE mode, const char format[], ...);
 
 class ArgParser{
 public:
     char* test_file;
-    bool print_debug;
+    bool single_step;
+    bool print_verbose;
+    bool print_pipelined;
     bool print_elf;
     ArgParser(int argc, char *argv[]);
 
@@ -37,8 +42,20 @@ private:
     void printHelp();
     void printError();
 };
-
 extern ArgParser *args;
+
+class Logger{
+public:
+    Logger();
+    void printResults();
+
+    int numCycles;
+    int numInsts;
+    int numDataHarzards;
+    int numLoadUseHazards;
+    int numDataForwards;
+    int numControlHazards;
+};
 
 extern const char *op_names[];
 extern const char *reg_names[];
