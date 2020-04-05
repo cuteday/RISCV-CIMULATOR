@@ -62,6 +62,7 @@ private:
     Regs reg;				// 寄存器堆
     int PC;
     REG_STATE state[NUM_STAGES];
+    int cycles;
     int exit_flag;      //系统调用退出指示
 
     IF_ID IFID, IFID_; 	    // 流水线寄存器们

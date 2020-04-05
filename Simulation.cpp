@@ -89,7 +89,7 @@ void Simulator::simulate(){
 	int end = (int)elf->endPC;
 	while(PC != end + 1){
 
-		DEBUG( DEBUG_P, "\n----------- Pipelined: New cycle! -----------\n\n");
+		DEBUG( DEBUG_P, "\n----------- Pipelined: New cycle #%d -----------\n\n", ++cycles);
 
 		// 所有控制位需要恢复默认值
 		memset(&IFID_, 0, sizeof(IFID_));
@@ -124,7 +124,6 @@ void Simulator::simulate(){
 		// reg[REG_ZERO] = 0;	//一直为零, 不必要 因为禁止对该寄存器进行更改...
 	}
 	fprintf(stdout, "\n\nProgram finished. Halting... > <\n");
-	reg.printInfo();
 	logger->printResults();
 }
 
