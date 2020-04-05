@@ -129,9 +129,7 @@ public:
 	void parse_results();
 
 	FILE *file;
-	FILE *elf;
 	Elf64_Ehdr elf64_hdr;
-	const char* elfname;
 	bool print_detail;
 
 	char *section_name;	//	at Header String Table Index in ELF_HEADER

@@ -3,11 +3,12 @@
 ElfReader::ElfReader(const char filename[]){
 	// print to stdout by default
 	file = fopen(filename, "r");
-	elf = stdout;
 	mem_offset = 0x7FFFFFFF;
 
+	if(file == NULL)
+		fprintf(stderr, "Executable not exist...\n");
+
 	assert(file != NULL);
-	assert(elf != NULL);
 	read_elf();
 }
 
@@ -26,7 +27,6 @@ void ElfReader::read_elf(){
 
 	parse_results();
 
-	if(elfname)fclose(elf);
 }
 
 void ElfReader::read_Elf_header(){

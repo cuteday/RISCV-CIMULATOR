@@ -1,6 +1,4 @@
 # Hi Hi!
-# <target> : <prerequisites> 
-# [tab]  <commands>	
 
 CC = c++
 CFLAGS = 
@@ -29,10 +27,12 @@ C_FILES = ./main.cpp\
 O_FILES = main.o Read_Elf.o Simulation.o Memory.o Utility.o Decode.o Execute.o 
 
 all: $(EXEC)
+	mkdir -p build
+	mv $(O_FILES) $(EXEC) ./build/
 
 $(EXEC): $(O_FILES)
 	$(CC) $(CFLAGS) -o $(EXEC) $(O_FILES)
-	# rm $(O_FILES)
+	
 
 main.o:	./Read_Elf.h \
 		$(H_COMMON)
@@ -61,4 +61,4 @@ Utility.o: $(H_COMMON)
 
 .PHONY: clean
 clean: 
-	rm $(O_FILES) $(EXEC)
+	rm -rf build
