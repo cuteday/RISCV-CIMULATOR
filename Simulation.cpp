@@ -6,6 +6,7 @@ Simulator::Simulator(char* filename){
 	fprintf(stdout, "Simulator built for %s... ^ ^ \n", filename);
 
 	logger = new Logger();
+	predictor = new BranchPredictor;
 	elf = new ElfReader(filename);
 	mainMemory = new Memory(MEMSIZE);
 
@@ -123,7 +124,7 @@ void Simulator::simulate(){
 		SingleStep();
 		// reg[REG_ZERO] = 0;	//一直为零, 不必要 因为禁止对该寄存器进行更改...
 	}
-	fprintf(stdout, "\n\nProgram finished. Halting... > <\n");
+	fprintf(stdout, "\nProgram finished. Halting... > <\n");
 	logger->printResults();
 }
 
@@ -220,13 +221,13 @@ REG_SIGNED Simulator::Syscall(SYSCALL_NAME type, REG arg){
 			fprintf(stdout, "%d", (int)arg);fflush(stdout);
 			break;
 		case SYSCALL_PRINTS:
-			fprintf(stdout, "%s", mainMemory->memory + (int)arg);fflush(stdout);
+			fprintf(stdout, "%s", mainMemory->memory + mainMemory->Translate(arg));fflush(stdout);
 			break;
 		case SYSCALL_GETC:
 			ret = getchar();
 			break;
 		case SYSCALL_GETD:
-			scanf("%lld", &ret);
+			fscanf(stdin, "%lld", &ret);
 			break;
 		default:
 			fprintf(stderr, "Requested syscall %02d not implemented T T...", type);

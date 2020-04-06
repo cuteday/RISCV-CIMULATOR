@@ -59,7 +59,8 @@ private:
     Logger *logger;	// 性能记录
 
     Memory* mainMemory;	// 主存
-    Regs reg;				// 寄存器堆
+    Regs reg;				    // 寄存器堆、
+    BranchPredictor* predictor;  
     int PC;
     REG_STATE state[NUM_STAGES];
     int cycles;

@@ -24,6 +24,7 @@ void matmul(int a[][M], int b[][C], int res[][C]){
 }
 
 int main(){
+    Prints("Calulating 5,5 matrix AxB...\n");
     matmul(B, A, RES);
     for (int i = 0; i < R;i++){
         for (int j = 0; j < C;j++){

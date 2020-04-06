@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <vector>
+#include <cassert>
 
 #define FALSE false
 #define TRUE true
@@ -55,6 +56,20 @@ public:
     int numLoadUseHazards;
     int numDataForwards;
     int numControlHazards;
+};
+
+enum PREDICT_MODE{
+    PREDICT_ANT,
+    PREDICT_AT,
+};
+
+class BranchPredictor{
+public:
+    BranchPredictor(PREDICT_MODE m = PREDICT_ANT):mode(m){}
+    bool Predict();
+
+private:
+    PREDICT_MODE mode;
 };
 
 extern const char *op_names[];

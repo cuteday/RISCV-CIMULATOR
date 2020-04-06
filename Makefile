@@ -1,6 +1,6 @@
 # Hi Hi!
 
-CC = c++
+CC = g++
 CFLAGS = 
 LIBS = 
 MAKE = make

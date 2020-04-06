@@ -10,7 +10,15 @@ int ackerman(int m, int n){
 }
 
 int main(){
-    int res = ackerman(3, 7);
+    int res;
+    Prints("Calculating ackerman(3,5)...\n");
+    res = ackerman(3, 5);
+    Printd(res);
+    Prints("\nCalculating ackerman(3,6)...\n");
+    res = ackerman(3, 6);
+    Printd(res);
+    Prints("\nCalculating ackerman(3,7)...\n");
+    res = ackerman(3, 7);
     Printd(res);
     return 0;
 }

@@ -42,7 +42,8 @@ struct IF_ID{
 struct ID_EX{	
 	uint Rd,Rt,Rs;	
 	int PC;
-	int Imm;			// 立即数内容
+  int predictedPC;
+  int Imm;			// 立即数内容
 	REG Reg_Rs,Reg_Rt;	// 操作数寄存器内容
 	OP_NAME inst;		// 投机取巧的实际指令> < 
 

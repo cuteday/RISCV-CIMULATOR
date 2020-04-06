@@ -3,3 +3,4 @@ run
 sort
 *.txt
 .DS_Store
+*.asm

@@ -2,6 +2,7 @@ TEST_FILES = ackerman.c\
 			mat-mul.c\
 			qsort.c\
 			ecall.c\
+			rev-pairs.c\
 
 OBJS := $(patsubst %c,%riscv,$(TEST_FILES))
 REFS := $(patsubst %c,%asm,$(TEST_FILES))

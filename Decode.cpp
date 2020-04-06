@@ -119,7 +119,7 @@ void Simulator::ID()
 
         if(inst.fuc3==F3_LB){
             MemRead = 1;
-            op_name = OP_LH;
+            op_name = OP_LB;
         }else if(inst.fuc3 == F3_LH){
             MemRead = 2;
             op_name = OP_LH;
@@ -128,7 +128,7 @@ void Simulator::ID()
             op_name = OP_LW;
         }else if(inst.fuc3 == F3_LD){
             MemRead = 8;
-            op_name = OP_LW;
+            op_name = OP_LD;
         }else if(inst.fuc3 == F3_LBU){
             MemRead = 1;
             op_name = OP_LBU;
@@ -277,6 +277,14 @@ void Simulator::ID()
             bubble(STAGE_EX);
             return;
     }
+
+    if(Instruction::isCondJump(op_name))
+        if(predictor->Predict()){
+            PC = IFID.PC + Imm;
+            IDEX_.predictedPC = PC;
+            bubble(STAGE_IF);
+            DEBUG(DEBUG_V, "ID :\t Predict to Jump to 0x%08x ***\n", PC);
+        }
 
     //write IDEX_
     IDEX_.inst = op_name;

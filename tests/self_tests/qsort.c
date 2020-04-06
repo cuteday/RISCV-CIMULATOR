@@ -16,13 +16,14 @@ void Qsort(int a[], int l, int r){
     Qsort(a, lp+1, r);
 }
 
-int a[105];
+int a[205];
 
 int main(){
-	for (int i = 100; i >= 0;i--)
-		a[i] = 100 - i;
-	Qsort(a, 0, 100);
-	for (int i = 0; i <= 100;i++){
+    Prints("Sorting from 200 to 0 ...\n");
+    for (int i = 200; i >= 0;i--)
+		a[i] = 200 - i;
+	Qsort(a, 0, 200);
+	for (int i = 0; i <= 200;i++){
 		Printd(a[i]);
 		Printc(' ');
 	}

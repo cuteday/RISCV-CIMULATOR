@@ -13,6 +13,7 @@ void Simulator::EX()
 	REG_SIGNED inp1, inp2;
 	REG_SIGNED Reg_Rs = IDEX.Reg_Rs, Reg_Rt = IDEX.Reg_Rt;
 	int Reg_PC = IDEX.PC;
+	int PredictPC = IDEX.predictedPC;
 
 	// choose ALU input operands
 	// THIS is a data bypass - DATA HAZARD 
@@ -63,7 +64,7 @@ void Simulator::EX()
 			break;	
 		case OP_SLL:
 		case OP_SLLI:
-			ALUout = inp1 << (inp2 & 0x3f);
+			ALUout = inp1 << (inp2 & 0x7f);
 			break;
 		case OP_MULH:
 			ALUout = calc_mulh(inp1, inp2);
@@ -81,11 +82,11 @@ void Simulator::EX()
 			break;
 		case OP_SRL:	// logical shift
 		case OP_SRLI:
-			ALUout = REG(inp1) >> (inp2 & 0x3f);
+			ALUout = REG(inp1) >> (inp2 & 0x7f);
 			break;
 		case OP_SRA:	// arithmetic shift
 		case OP_SRAI:
-			ALUout = inp1 >> (inp2 & 0x3f);
+			ALUout = inp1 >> (inp2 & 0x7f);
 			break;
 		case OP_OR:		// 奥里小精灵♪
 		case OP_ORI:
@@ -112,15 +113,15 @@ void Simulator::EX()
 			break;
 		case OP_SLLW:
 		case OP_SLLIW:
-			ALUout = REG_SIGNED(uint(inp1) << (inp2 & 0x1f));
+			ALUout = REG_SIGNED(uint(inp1) << (inp2 & 0x3f));
 			break;
 		case OP_SRLW:
 		case OP_SRLIW:
-			ALUout = REG_SIGNED(uint(inp1) >> (inp2 & 0x1f));
+			ALUout = REG_SIGNED(uint(inp1) >> (inp2 & 0x3f));
 			break;
 		case OP_SRAW:
 		case OP_SRAIW:
-			ALUout = REG_SIGNED(int(inp1) >> (inp2 & 0x1f));
+			ALUout = REG_SIGNED(int(inp1) >> (inp2 & 0x3f));
 			break;
 
 		case OP_LB:		
@@ -191,6 +192,7 @@ void Simulator::EX()
 	logger->numCycles += ExecuteTime(op_name);
 
 	if(Branch){
+	// if(Branch && PredictPC != RegPC)
 		PC = Reg_PC; // next pc
 		bubble(STAGE_IF);
 		bubble(STAGE_ID);

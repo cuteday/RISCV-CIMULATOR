@@ -80,6 +80,16 @@ void ArgParser::printError(){
     assert(false);
 }
 
+bool BranchPredictor::Predict(){
+    switch (mode){
+    case PREDICT_AT: 
+        return true;
+    case PREDICT_ANT:
+        return false;
+    }
+    return false;
+}
+
 ull calc_mulh(ull a, ull b){
     ull    a_lo = (uint)a;
     ull    a_hi = a >> 32;
