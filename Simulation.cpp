@@ -6,15 +6,15 @@ Simulator::Simulator(char* filename, bool enable_cache_){
 	fprintf(stdout, "Simulator built for %s... ^ ^ \n", filename);
 
 	logger = new Logger();
-	predictor = new BranchPredictor;
+	predictor = new BranchPredictor();
 	elf = new ElfReader(filename);
+	mainMemory = new Memory(MEMSIZE);
 	enable_cache = enable_cache_;
-	if(enable_cache){
-		cache = build_cache(cfg_nlayers, cfg_bsize, cfg_nsets, cfg_assoc, cfg_policy, cfg_through, cfg_allocate);
-		mainMemory = cache->memory;
-	}
-	else mainMemory = new Memory(MEMSIZE);
-	load_memory();
+
+	if(enable_cache)
+		storage = build_cache(cfg_cache_default, mainMemory);
+	else
+		storage = mainMemory;
 }
 
 int Simulator::ExecuteTime(OP_NAME op){
@@ -65,32 +65,17 @@ void Simulator::bubble(STAGE_NAME stage){
 	state[stage] = REG_BUBBLE;
 }
 
-void Simulator::load_memory(){
-	// 直接把物理地址当虚拟地址了
-
-	mainMemory->offset = elf->mem_offset;
-	for (int i = 0; i < elf->phdrs.size();i++){
-		Elf64_Phdr& elf64_phdr = elf->phdrs[i];
-		fseek(elf->file, *(ull *)&elf64_phdr.p_offset, 0);
-		fread(mainMemory->memory + *(ull *)&elf64_phdr.p_vaddr - mainMemory->offset, 1, *(ull*)&elf64_phdr.p_filesz, elf->file);
-	}
-
+void Simulator::simulate(){
+	fprintf(stdout, "Starting simulation...\n\n");
+	// 加载可执行文件
+	mainMemory->Loader(elf->file, elf->phdrs, elf->mem_offset);
 	//设置入口地址
 	PC = elf->entry;
 	//设置全局数据段地址寄存器
 	reg[REG_GP] = elf->gp;
 	reg[REG_SP] = MEMSIZE / 2 + mainMemory->offset; //栈基址 （sp寄存器）
 	DEBUG(DEBUG_V, "Executable loaded into memory...\n");
-}
 
-// 针对数据冒险，已经：
-// 在EX加入了旁路单元进行转发	  √
-// 在ID加入了冒险检测单元stall LU 	√
-// 针对控制冒险，
-
-void Simulator::simulate(){
-	fprintf(stdout, "Starting simulation...\n\n");
-	//结束PC的设置
 	int end = (int)elf->endPC;
 	while(PC != end + 1){
 
@@ -129,9 +114,8 @@ void Simulator::simulate(){
 		// reg[REG_ZERO] = 0;	//一直为零, 不必要 因为禁止对该寄存器进行更改...
 	}
 	fprintf(stdout, "\nProgram finished. Halting... > <\n");
+	storage->printStatisticsAll();
 	logger->printResults();
-	if(enable_cache)
-		cache->printHistory();
 }
 
 //取指令
@@ -140,11 +124,9 @@ void Simulator::IF(){
 	// IMPORTANT: RISC-V中的相对跳转是对PC而不是PC+4
 
 	DEBUG(DEBUG_P, "IF :\tFetching instruction at PC 0x%08x\n", PC);
-	if(enable_cache)
-		cache->Read(PC, 4, &IFID_.inst, cycles);
-		// cache->CacheToReg(PC, 4, &IFID_.inst, cycles);
-	else
-		mainMemory->Read(PC, 4, &IFID_.inst, cycles);
+
+	storage->Read(PC, 4, &IFID_.inst, cycles);
+
 	IFID_.PC = PC; // 前传更新前的PC
 	PC += 4;
 }
@@ -162,17 +144,13 @@ void Simulator::MEM(){
 
 	if(ReadLen){
 		DEBUG(DEBUG_P, "MEM:\tReading %d byte at vaddr 0x%08x\n", ReadLen, ALU_out);
-		if(enable_cache)
-			cache->Read(ALU_out, ReadLen, &Mem_read, cycles, true);
-		else mainMemory->Read(ALU_out, ReadLen, &Mem_read, cycles, true);
+			storage->Read(ALU_out, ReadLen, &Mem_read, cycles, true);
 	}
 	if(WriteLen){
 		DEBUG(DEBUG_P, "MEM:\tWriting %d byte at vaddr 0x%08x, value 0x%-8x\n", WriteLen, ALU_out, Reg_Rt);
-		if(enable_cache)
-			cache->Write(ALU_out, WriteLen, Reg_Rt, cycles);
-		else mainMemory->Write(ALU_out, WriteLen, Reg_Rt, cycles);
+			storage->Write(ALU_out, WriteLen, Reg_Rt, cycles);
+
 	}
-	
 	//write MEMWB_
 	MEMWB_.Mem_read = Mem_read;
 	MEMWB_.ALU_out = ALU_out;

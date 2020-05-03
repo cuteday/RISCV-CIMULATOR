@@ -16,11 +16,6 @@
 #include <cstring>
 #include "Memory.h"
 #define POWER2(x) (((x)&((x)-1))==0)
-
-typedef unsigned long long ull;
-
-// typedef unsigned int size_t;
-
 extern int log2(int x);
 
 enum POLICY{
@@ -33,6 +28,15 @@ enum CACHEBLK_STATUS{
     CACHEBLK_VALID,
     CACHEBLK_DIRTY,
 };
+
+typedef struct{
+    int associativity;
+    size_t block_size;
+    int num_sets;
+    POLICY policy;
+    bool write_through;
+    bool write_allocate;
+} CacheConfig;
 
 class CacheBlock{
 public:
@@ -60,39 +64,23 @@ private:
 
 class Cache: public Storage{
 public:
-    Cache(int associativity_,
-        size_t block_size_,
-        int num_sets_,
-        POLICY policy_,
-        bool write_through_ = false,
-        bool write_allocate_ = false);
+    Cache(CacheConfig config, char* name_ = NULL);
 
-    // inplementation of the virtual func
+    // inplementation of the virtual functions
     void HandleRequest(addr64_t vaddr, int bytes, bool write,
                        char *data, int &time);
+    void printParameters();
+    void printStatistics();
 
     CacheBlock* FindReplace(addr64_t addr, int& time);
     CacheBlock* FindBlock(addr64_t addr);       
-    // int LoadBlock(addr64_t addr, CacheBlock *src); // when a block exchanged to lower layer...
-
-    struct History{
-        int num_hits;
-        int num_misses;
-        int num_reads;
-        int num_writes;
-    } history;
-    void printHistory();
-    void printParameters();
 
     // algorithms
-    void PartitionAlgorithm();    // Partitioning
-    int BypassDecision();    // Bypassing
-    int PrefetchDecision();    // Prefetching
+    void PartitionAlgorithm();      // Partitioning
     void PrefetchAlgorithm();
-
-    // access to lower (recursive); LLC should try access memory > <
-    void AccessLowerLayer(addr64_t vaddr, int nbytes, bool write, char *data, int &time);
-
+    int BypassDecision();           // Bypassing
+    int PrefetchDecision();         // Prefetching
+    
     // utility functions
     addr64_t getTag(addr64_t addr) { return (addr & tag_mask) >> (set_bits + block_bits); }
     int getSet(addr64_t addr) { return (addr & set_mask) >> block_bits; }
@@ -103,11 +91,6 @@ public:
     int num_sets;
     int cache_size;
     CacheSet **sets;
-
-    // multi-layer cache things
-    Cache *lower;
-    Memory *memory;
-    bool LLC;   // is last layer cache? (connected to memory manager...)
 
     // policy things
     POLICY policy;
@@ -126,12 +109,5 @@ public:
 
 // Build CacheManager in a linked-list form
 // return [head]L1C -> L2C -> ... -> LLC -> Memory
-extern Cache *build_cache(int num_layers, int block_size[], int num_sets[], int associativity[], POLICY policy[], bool write_through[], bool write_allocate[]);
-
-extern int cfg_nlayers;
-extern int cfg_bsize[];
-extern int cfg_nsets[];
-extern int cfg_assoc[];
-extern POLICY cfg_policy[];
-extern bool cfg_through[];
-extern bool cfg_allocate[];
+extern Cache *build_cache(std::vector<CacheConfig> &configs, Memory *memory = NULL);
+extern std::vector<CacheConfig> cfg_cache_default;

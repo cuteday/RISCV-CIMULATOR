@@ -41,8 +41,10 @@ void Storage::Write(addr64_t addr, int nbytes, ull data, int &time){
     }
 }
 
-Memory::Memory(int size):memsize(size){
+Memory::Memory(int size, char* name_):memsize(size){
     memory = new char[size];
+    name = name_ == NULL ? "Memory" : name_;
+    lower = NULL;
     memset(memory, 0, size);
 }
 
@@ -54,16 +56,38 @@ addr64_t Memory::Translate(int vaddr){
 // Cache API ver. returns latency estimated > <
 void Memory::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, int &time){
     int addr = Translate(vaddr);
+    int timing = latency.hit_latency + latency.bus_latency;
+    stats.access_time += timing;
     if(write){
+        stats.num_reads++;
         memcpy(memory + addr, data, nbytes);
     }
     else{
+        stats.num_writes++;
         memcpy(data, memory + addr, nbytes);
     }
     DEBUG(DEBUG_V, "MemoryManager: Directly accessing -> vaddr 0x%x, write: %d, size: %d, value: %llx\n", vaddr, write, nbytes, *(ll*)data);
     time += 5;
 }
 
+void Memory::printParameters(){
+    fprintf(stdout, "-----------------------%s Parameters--------------------\n", name);
+    fprintf(stdout, "Memory Size: %lld\n", memsize);
+}
+void Memory::printStatistics(){
+    fprintf(stdout, "-----------------------%s Statistics--------------------\n", name);
+    fprintf(stdout, "Num Reads: %d\n", stats.num_reads);
+    fprintf(stdout, "Num Writes: %d\n", stats.num_writes);
+}
+
+void Memory::Loader(FILE *elf, std::vector<Elf64_Phdr> &phdrs, ull offset_){
+    offset = offset_;
+    for (int i = 0; i < phdrs.size(); i++){
+        Elf64_Phdr& elf64_phdr = phdrs[i];
+		fseek(elf, *(ull *)&elf64_phdr.p_offset, 0);
+		fread(memory + *(ull *)&elf64_phdr.p_vaddr - offset, 1, *(ull*)&elf64_phdr.p_filesz, elf);
+    }
+}
 
 void Memory::DumpMem(const char filename[]){
     FILE *file = fopen(filename, "w");

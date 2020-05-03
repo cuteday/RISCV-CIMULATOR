@@ -52,7 +52,6 @@ enum REG_STATE{
 class Simulator{
 public:
     Simulator(char* filename, bool enable_cache_ = false);
-    void load_memory();
     void simulate();    
     
 private:
@@ -60,8 +59,9 @@ private:
     Logger *logger;	// 性能记录
 
     Memory* mainMemory;	// 主存
-    Cache *cache;
-    bool enable_cache; // cache on
+    // Cache *cache;
+    Storage *storage;   // 利用多态的储存
+    bool enable_cache;  // cache on
 
     Regs reg;				    // 寄存器堆、
     BranchPredictor* predictor;  

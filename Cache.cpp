@@ -1,5 +1,5 @@
 #include "Cache.h"
-
+using namespace std;
 // 写存:
 // 命中 -> 写回 / 直接写到下层
 // 不命中 -> 写分配loadFromLower, 写不分配直接写到下层(一般下层也是写不分配)
@@ -14,50 +14,38 @@ int log2(int x){
     return res;
 }
 
-Cache *build_cache(int num_layers, int block_size[], int num_sets[], int associativity[], POLICY policy[], bool write_through[], bool write_allocate[]){
-    assert(num_layers > 0);
-    Cache *first = NULL, *tail = NULL;
-    Memory *memory = new Memory(MEMSIZE);
-    for (int i = 0; i < num_layers; i++){
-        fflush(stdout);
-        Cache *cur_layer = new Cache(
-            associativity[i],
-            block_size[i],
-            num_sets[i],
-            policy[i],
-            write_through[i],
-            write_allocate[i]);
+Cache *build_cache(vector<CacheConfig> &configs, Memory *memory){
+    if(memory == NULL)
+        memory = new Memory(MEMSIZE);
+    // if(!configs.size())
+    //     return memory;
+    Cache *first = NULL, *last = NULL;
+    for (int i = 0; i < configs.size();i++){
+        Cache *cur_layer = new Cache(configs[i]);
         if(first==NULL)
             first = cur_layer;
         else
-            tail->lower = cur_layer;
-        tail = cur_layer;
-        cur_layer->memory = memory;
+            last->lower = cur_layer;
+        last = cur_layer;
     }
-    DEBUG(DEBUG_V, "Finished constructing a %d-layer cache manager ^ ^\n", num_layers);
-    tail->LLC = true, tail->lower = NULL;
+    DEBUG(DEBUG_V, "Finished constructing a %d-layer cache manager ^ ^\n", (int)configs.size());
+    last->lower = memory;
     return first;
 }
 
-Cache::Cache(
-    int associativity_,
-    size_t block_size_,
-    int num_sets_,
-    POLICY policy_,
-    bool write_through_,
-    bool write_allocate_){
-  
-    assert(associativity_ > 0);
-    assert(block_size_ >= 8 && POWER2(block_size_));    // ignored lower bits
-    assert(num_sets_ > 0 && POWER2(num_sets_)); // lower log(nsets) bits
-
-    associativity = associativity_;
-    block_size = block_size_;
-    num_sets = num_sets_;
-    policy = policy_;
-    write_through = write_through_;
-    write_allocate = write_allocate_;
+Cache::Cache(CacheConfig config, char* name_){
+    name = name_ == NULL ? "Cache" : name_;
+    associativity = config.associativity;
+    block_size = config.block_size;
+    num_sets = config.num_sets;
+    policy = config.policy;
+    write_through = config.write_through;
+    write_allocate = config.write_allocate;
     cache_size = associativity * block_size * num_sets;
+
+    assert(associativity > 0);
+    assert(block_size >= 8 && POWER2(block_size));    // ignored lower bits
+    assert(num_sets > 0 && POWER2(num_sets)); // lower log(nsets) bits
 
     // initiate masks:
     set_bits = log2(num_sets);
@@ -71,6 +59,7 @@ Cache::Cache(
     for (int i = 0; i < num_sets; i++)
         sets[i] = new CacheSet(associativity, block_size);
 }
+
 
 CacheBlock* Cache::FindBlock(addr64_t addr){
     addr64_t tag = getTag(addr);
@@ -103,43 +92,37 @@ CacheBlock* Cache::FindReplace(addr64_t addr, int& time){
     // LRU下 被替换的块 一般在下层存在...
     // 在某些极端的替换策略下除外...
     if(replace->status == CACHEBLK_DIRTY){
-        AccessLowerLayer(replace_addr, block_size, 1, replace->dataptr, time);
+        lower->HandleRequest(replace_addr, block_size, 1, replace->dataptr, time);
     }
     return replace;
 }
 
-// sub to Cache::AccessCache, Cache <-> Mem Interface  
-void Cache::AccessLowerLayer(addr64_t vaddr, int nbytes, bool write, char *data, int& time){
-    DEBUG(DEBUG_D, "Accessing lower layer from current layer...\n");
-    if (LLC) // LLC, write to memory
-        memory->HandleRequest(vaddr, nbytes, write, data, time);
-    else
-        lower->HandleRequest(vaddr, nbytes, write, data, time);
-}
 
 void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, int &time){
     assert(POWER2(nbytes));
 
     addr64_t tag = getTag(vaddr);
+    int timing = 0;         // time used in this layer
     int set = getSet(vaddr);
     int offset = getOffset(vaddr);
     CacheBlock* target = FindBlock(vaddr);   // attempt to find it
     DEBUG(DEBUG_V, "CacheManager: Access Request, tag 0x%llx, set 0x%x, offset 0x%x, length %d\n", tag, set, offset, nbytes);
     
     if(write)
-        history.num_writes++;
-    else history.num_reads++;
+        stats.num_writes++;
+    else stats.num_reads++;
 
     if(target == NULL){     // miss
-        history.num_misses++;
+        stats.num_misses++;
+        timing += latency.bus_latency;   // and lower layer hit latency...
         if (write && !write_allocate){
-            AccessLowerLayer(vaddr, nbytes, write, data, time);
+            lower->HandleRequest(vaddr, nbytes, write, data, time);
         }
         // else, need to find a block for replacement:
         target = FindReplace(vaddr, time);
         // fetch from lower cache when...
         // READ enable OR write allocate
-        AccessLowerLayer(vaddr & ~block_mask, (int)block_size, 0, target->dataptr, time);
+        lower->HandleRequest(vaddr & ~block_mask, (int)block_size, 0, target->dataptr, time);
         target->status = CACHEBLK_VALID;
         target->tag = tag;
         // data transaction
@@ -152,32 +135,33 @@ void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, in
     }else{      // hit
         // READ enable: 
         // just cpy data and return
-        history.num_hits++;
+        stats.num_hits++;
+        timing += latency.bus_latency + latency.hit_latency;
         if(write){
             memcpy(target->dataptr + offset, data, nbytes);
             if(write_through)   // write through: change cache and lower layer cache... until memory
-                AccessLowerLayer(vaddr, nbytes, write, data, time);
+                lower->HandleRequest(vaddr, nbytes, write, data, time);
             else target->status = CACHEBLK_DIRTY;
-            // fprintf(stdout, "wrote data: 0x%llx\n", *(ull*)target->dataptr);
         }
         else    // read 
             memcpy(data, target->dataptr + offset, (size_t)nbytes);
     }
-    target->last_access = ++time_stamp;   // LRU
+    time += timing;
+    target->last_access = ++time_stamp; // LRU
 }
 
-
-void Cache::printHistory(){
-    fprintf(stdout, "-----------------------Cache History--------------------\n");
-    fprintf(stdout, "Num Reads: %d\n", history.num_reads);
-    fprintf(stdout, "Num Writes: %d\n", history.num_writes);
-    fprintf(stdout, "Num Hits: %d\n", history.num_hits);
-    fprintf(stdout, "Num Misses: %d\n", history.num_misses);
-    fprintf(stdout, "Miss Rate: %.2f\n", (float)history.num_misses / (history.num_hits + history.num_misses));
+// Implement virtual funcs
+void Cache::printStatistics(){
+    fprintf(stdout, "-----------------------%s Statistics--------------------\n", name);
+    fprintf(stdout, "Num Reads: %d\n", stats.num_reads);
+    fprintf(stdout, "Num Writes: %d\n", stats.num_writes);
+    fprintf(stdout, "Num Hits: %d\n", stats.num_hits);
+    fprintf(stdout, "Num Misses: %d\n", stats.num_misses);
+    fprintf(stdout, "Miss Rate: %.2f\n", (float)stats.num_misses / (stats.num_hits + stats.num_misses));
 }
 
 void Cache::printParameters(){
-    fprintf(stdout, "----------------------Cache Parameters-------------------\n");
+    fprintf(stdout, "----------------------%s Parameters-------------------\n", name);
     fprintf(stdout, "Cache Size: %d\nBlock Size: %d\nAssociativity: %d\nNum Sets: %d\nPolicy: LRU\nWrite Back: %d\nWrite Allocate: %d\n",
                 cache_size, (int)block_size, associativity, num_sets, !write_through, write_allocate);
 }
@@ -196,11 +180,9 @@ CacheBlock::CacheBlock(size_t block_size) {
     dataptr = (char*)calloc(block_size, 1);
 }
 
-// ____________________________ Configs ________________________________
-int cfg_nlayers = 1;
-int cfg_bsize[] = {8};
-int cfg_nsets[] = {8};
-int cfg_assoc[] = {1};
-POLICY cfg_policy[] = {LRU};
-bool cfg_through[] = {false};
-bool cfg_allocate[] = {true};
+// __________________________________________ Default Configs ______________________________________________
+// Config Format: assoc, bsize, nsets, policy, WT, WA
+#define cfg_cache_nlayers  1
+CacheConfig cfg_cache_l1 = {8, 8, 8, LRU, false, true};
+CacheConfig cfg_cache_default_[] = {cfg_cache_l1};
+vector<CacheConfig> cfg_cache_default(cfg_cache_default_, cfg_cache_default_ + cfg_cache_nlayers);

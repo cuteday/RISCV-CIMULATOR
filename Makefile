@@ -46,6 +46,7 @@ Simulation.o: ./Simulation.h \
 			$(H_COMMON)
 
 Memory.o: ./Memory.h\
+		./Read_Elf.h \
 		$(H_COMMON)
 
 Cache.o: ./Memory.h\
@@ -64,6 +65,10 @@ Read_Elf.o: ./Read_Elf.h \
 			$(H_COMMON)
 
 Utility.o: $(H_COMMON)
+
+CacheTrace.o: ./Memory.h \
+			Cache.h\
+			$(H_COMMON)
 
 .PHONY: clean
 clean: 
