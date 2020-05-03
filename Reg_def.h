@@ -35,7 +35,8 @@ enum PIPELINE_STATE{
 };
 
 struct IF_ID{
-	uint inst;
+  // uint inst;
+  ull inst;
 	int PC;
 };
 

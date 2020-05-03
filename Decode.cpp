@@ -261,7 +261,7 @@ void Simulator::ID()
     }
 
     if(op_name == OP_INVALID){   
-        fprintf(stderr, "Illegal Instuction 0x%08x. Halting > <\n", inst.inst);
+        fprintf(stderr, "Illegal Instuction 0x%08llx. Halting > <\n", inst.inst);
         assert(false);
     }
 

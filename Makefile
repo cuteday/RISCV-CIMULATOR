@@ -16,6 +16,7 @@ H_FILES = ./Utility.h\
 		./Simulation.h\
 		./Memory.h\
 		./Instruction.h\
+		./Cache.h\
 
 C_FILES = ./main.cpp\
 		./Read_Elf.cpp\
@@ -23,8 +24,9 @@ C_FILES = ./main.cpp\
 		./Memory.cpp\
 		./Decode.cpp\
 		./Execute.cpp\
+		./Cache.cpp\
 
-O_FILES = main.o Read_Elf.o Simulation.o Memory.o Utility.o Decode.o Execute.o 
+O_FILES = main.o Read_Elf.o Simulation.o Memory.o Utility.o Decode.o Execute.o Cache.o
 
 all: $(EXEC)
 	mkdir -p build
@@ -46,6 +48,10 @@ Simulation.o: ./Simulation.h \
 Memory.o: ./Memory.h\
 		$(H_COMMON)
 
+Cache.o: ./Memory.h\
+		Cache.h\
+		$(H_COMMON)
+
 Decode.o: ./Simulation.h\
 		./Instruction.h\
 		$(H_COMMON)
@@ -62,3 +68,5 @@ Utility.o: $(H_COMMON)
 .PHONY: clean
 clean: 
 	rm -rf build
+
+cache: Cache.o

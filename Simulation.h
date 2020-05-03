@@ -4,8 +4,9 @@
 #include "Read_Elf.h"
 #include "Instruction.h"
 #include "Memory.h"
+#include "Cache.h"
 
-#define MEMSIZE 10000000
+
 
 // 课堂摸鱼笔记
 // 多周期数据通路 Cycle数?
@@ -50,7 +51,7 @@ enum REG_STATE{
 
 class Simulator{
 public:
-    Simulator(char* filename);
+    Simulator(char* filename, bool enable_cache_ = false);
     void load_memory();
     void simulate();    
     
@@ -59,6 +60,9 @@ private:
     Logger *logger;	// 性能记录
 
     Memory* mainMemory;	// 主存
+    Cache *cache;
+    bool enable_cache; // cache on
+
     Regs reg;				    // 寄存器堆、
     BranchPredictor* predictor;  
     int PC;
@@ -75,6 +79,9 @@ private:
     void EX();
     void MEM();
     void WB();
+
+    void Read(addr64_t addr, int nbytes, ull *data, int &time, bool sign_ext = true);
+    void Write(addr64_t addr, int nbytes, ull data, int &time);
 
     int ExecuteTime(OP_NAME op);	// ALU周期计算
     void SingleStep();						// 单步调试

@@ -11,7 +11,7 @@ int main(int argc, char* argv[]){
     debug_on[DEBUG_P] = args->print_pipelined;
     test_file = args->test_file;
 
-    Simulator simulator = Simulator(test_file);
+    Simulator simulator = Simulator(test_file, args->cache_enable);
     simulator.simulate();
     return 0;
 }

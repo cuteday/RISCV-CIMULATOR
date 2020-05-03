@@ -52,6 +52,9 @@ ArgParser::ArgParser(int argc, char *argv[]){
         else if(!strcmp(argv[i], "-p")){
             print_pipelined = true;
         }
+        else if(!strcmp(argv[i], "-cache")){
+            cache_enable = true;
+        }
         else if(!strcmp(argv[i], "-h")){
             printHelp();
         }
@@ -88,6 +91,28 @@ bool BranchPredictor::Predict(){
         return false;
     }
     return false;
+}
+
+ull signed_ext(ull src, int size, bool sign){
+    ull value;
+    switch (size){
+    case sizeof(char):
+        value = *(char *)&src;
+        break;
+    case sizeof(short):
+        value = *(short *)&src;
+        break;
+    case sizeof(int):
+        value = *(int *)&src;
+        break;
+    case sizeof(long long):
+        value = *(long long *)&src;
+        break;
+    default:
+        fprintf(stderr, "Unsupported size %d for reading memory > <\n", size);
+        assert(false);
+    }
+    return value;
 }
 
 ull calc_mulh(ull a, ull b){

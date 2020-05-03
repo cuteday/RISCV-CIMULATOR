@@ -19,6 +19,7 @@ typedef long long ll;
 typedef unsigned long long ull;
 typedef unsigned char uchar;
 typedef unsigned short ushort;
+typedef unsigned long long addr64_t;    // simulator rv64i
 
 enum DEBUG_MODE{
     DEBUG_D,
@@ -37,6 +38,7 @@ public:
     bool print_verbose;
     bool print_pipelined;
     bool print_elf;
+    bool cache_enable;
     ArgParser(int argc, char *argv[]);
 
 private:
@@ -76,7 +78,7 @@ extern const char *op_names[];
 extern const char *reg_names[];
 extern const char *scall_names[];
 
-
+extern ull signed_ext(ull src, int size, bool sign = true);
 
 extern ull calc_mulh(ull a, ull b);
 

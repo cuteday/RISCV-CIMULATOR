@@ -65,7 +65,8 @@ enum OP_NAME{
 
 class Instruction{
 public:
-    unsigned int inst;
+    // uint inst;
+    ull inst;
 
     unsigned int OP;
     unsigned int fuc3,fuc7;

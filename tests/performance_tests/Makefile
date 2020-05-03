@@ -11,7 +11,7 @@ CC = riscv64-unknown-elf-gcc -Wa,-march=rv64im
 OBJDUMP = riscv64-unknown-elf-objdump -D
 CFLAGS = 
 
-all: $(OBJS) # $(REFS)
+all: $(OBJS)  $(REFS)
 
 %.riscv: %.c
 	$(CC) $(CFLAGS)  -o $@ $^ 

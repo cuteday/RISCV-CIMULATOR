@@ -1,15 +1,19 @@
 #include "Simulation.h"
 using namespace std;
 
-Simulator::Simulator(char* filename){
+Simulator::Simulator(char* filename, bool enable_cache_){
 	memset(this, 0, sizeof(Simulator));
 	fprintf(stdout, "Simulator built for %s... ^ ^ \n", filename);
 
 	logger = new Logger();
 	predictor = new BranchPredictor;
 	elf = new ElfReader(filename);
-	mainMemory = new Memory(MEMSIZE);
-
+	enable_cache = enable_cache_;
+	if(enable_cache){
+		cache = build_cache(cfg_nlayers, cfg_bsize, cfg_nsets, cfg_assoc, cfg_policy, cfg_through, cfg_allocate);
+		mainMemory = cache->memory;
+	}
+	else mainMemory = new Memory(MEMSIZE);
 	load_memory();
 }
 
@@ -76,7 +80,7 @@ void Simulator::load_memory(){
 	//设置全局数据段地址寄存器
 	reg[REG_GP] = elf->gp;
 	reg[REG_SP] = MEMSIZE / 2 + mainMemory->offset; //栈基址 （sp寄存器）
-	
+	DEBUG(DEBUG_V, "Executable loaded into memory...\n");
 }
 
 // 针对数据冒险，已经：
@@ -126,6 +130,8 @@ void Simulator::simulate(){
 	}
 	fprintf(stdout, "\nProgram finished. Halting... > <\n");
 	logger->printResults();
+	if(enable_cache)
+		cache->printHistory();
 }
 
 //取指令
@@ -134,8 +140,11 @@ void Simulator::IF(){
 	// IMPORTANT: RISC-V中的相对跳转是对PC而不是PC+4
 
 	DEBUG(DEBUG_P, "IF :\tFetching instruction at PC 0x%08x\n", PC);
-
-	IFID_.inst = mainMemory->ReadMem(PC, 4);
+	if(enable_cache)
+		cache->Read(PC, 4, &IFID_.inst, cycles);
+		// cache->CacheToReg(PC, 4, &IFID_.inst, cycles);
+	else
+		mainMemory->Read(PC, 4, &IFID_.inst, cycles);
 	IFID_.PC = PC; // 前传更新前的PC
 	PC += 4;
 }
@@ -151,30 +160,19 @@ void Simulator::MEM(){
 	uint WriteLen = EXMEM.Ctrl_M_MemWrite;
 	char Branch = EXMEM.Ctrl_M_Branch;
 
-	// complete Branch instruction PC change 
-	// 现在的跳转策略: Always not taken, 在MEM阶段修正
-	// bubble IF ID EX
-	// if(Branch){
-	// 	PC = EXMEM.PC;		// next pc
-	// 	bubble(STAGE_IF);
-	// 	bubble(STAGE_ID);
-	// 	bubble(STAGE_EX);
-	// 	DEBUG( DEBUG_V, "***MEM: Jump! to PC 0x%08x\n", PC);
-	// 	logger->numControlHazards++;
-	// }
-
-	//read / write memory
 	if(ReadLen){
 		DEBUG(DEBUG_P, "MEM:\tReading %d byte at vaddr 0x%08x\n", ReadLen, ALU_out);
-		Mem_read = mainMemory->ReadMem(ALU_out, ReadLen);
-		logger->numCycles += 3;
+		if(enable_cache)
+			cache->Read(ALU_out, ReadLen, &Mem_read, cycles, true);
+		else mainMemory->Read(ALU_out, ReadLen, &Mem_read, cycles, true);
 	}
 	if(WriteLen){
-		DEBUG(DEBUG_P, "MEM:\tWriting %d byte at vaddr 0x%08x, value 0x%-8x\n", ReadLen, ALU_out, Reg_Rt);
-		mainMemory->WriteMem(ALU_out, WriteLen, Reg_Rt);
-		logger->numCycles += 3;
+		DEBUG(DEBUG_P, "MEM:\tWriting %d byte at vaddr 0x%08x, value 0x%-8x\n", WriteLen, ALU_out, Reg_Rt);
+		if(enable_cache)
+			cache->Write(ALU_out, WriteLen, Reg_Rt, cycles);
+		else mainMemory->Write(ALU_out, WriteLen, Reg_Rt, cycles);
 	}
-
+	
 	//write MEMWB_
 	MEMWB_.Mem_read = Mem_read;
 	MEMWB_.ALU_out = ALU_out;
@@ -186,7 +184,6 @@ void Simulator::MEM(){
 
 //写回
 void Simulator::WB(){
-
 	// 本阶段已经无需考虑冒险和旁路
 	// read MEMWB
 	char RegWrite = MEMWB.Ctrl_WB_RegWrite;
