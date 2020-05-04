@@ -20,11 +20,11 @@ void Storage::Read(addr64_t addr, int nbytes, ull *data, int &time, bool sign_ex
     }else{
         fprintf(stderr, "Unsupported size %d for fetching cache > <\n", nbytes);
     }
-    DEBUG( DEBUG_V, "StorageManager: Reading VA 0x%08x, size %d, value 0x%llx\n", addr, nbytes, *data);
+    DEBUG( DEBUG_V, "StorageManager: %s Reading VA 0x%08x, size %d, value 0x%llx\n", name, addr, nbytes, *data);
 }
 
 void Storage::Write(addr64_t addr, int nbytes, ull data, int &time){
-	DEBUG( DEBUG_V, "StorageManager: Writing VA 0x%08x, size %d, value 0x%llx\n", addr, nbytes, data);
+	DEBUG( DEBUG_V, "StorageManager: %s Writing VA 0x%08x, size %d, value 0x%llx\n", name, addr, nbytes, data);
     if(nbytes==1){
         char value = data;
         HandleRequest(addr, nbytes, 1, (char *)&value, time);
@@ -41,10 +41,12 @@ void Storage::Write(addr64_t addr, int nbytes, ull data, int &time){
     }
 }
 
-Memory::Memory(int size, char* name_):memsize(size){
+Memory::Memory(int size, const char *name_, bool trace_mode_):memsize(size){
     memory = new char[size];
     name = name_ == NULL ? "Memory" : name_;
+    trace_mode = trace_mode_;
     lower = NULL;
+    offset = 0;
     memset(memory, 0, size);
 }
 
@@ -58,16 +60,18 @@ void Memory::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, i
     int addr = Translate(vaddr);
     int timing = latency.hit_latency + latency.bus_latency;
     stats.access_time += timing;
-    if(write){
-        stats.num_reads++;
+    time += timing;
+    if(write)stats.num_writes++;
+    else stats.num_reads++;
+    if(trace_mode) return; // 使用trace 不作实际读写 (地址空间太大了额)
+
+    if (write){
         memcpy(memory + addr, data, nbytes);
     }
     else{
-        stats.num_writes++;
         memcpy(data, memory + addr, nbytes);
     }
-    DEBUG(DEBUG_V, "MemoryManager: Directly accessing -> vaddr 0x%x, write: %d, size: %d, value: %llx\n", vaddr, write, nbytes, *(ll*)data);
-    time += 5;
+    // DEBUG(DEBUG_V, "MemoryManager: Directly accessing -> vaddr 0x%x, write: %d, size: %d, value: %llx\n", vaddr, write, nbytes, *(ll*)data);
 }
 
 void Memory::printParameters(){

@@ -5,7 +5,7 @@
 #define MEM_HL  100      // memory hit latency
 
 // Storage access stats
-typedef struct StorageStats_ {
+typedef struct{
     int num_hits;
     int num_misses;
     int num_reads;
@@ -17,7 +17,7 @@ typedef struct StorageStats_ {
 } StorageStats;
 
 // Storage basic config
-typedef struct StorageLatency{
+typedef struct{
   int hit_latency; // In nanoseconds
   int bus_latency; // Added to each request
 } StorageLatency;
@@ -39,7 +39,10 @@ public:
         printStatistics();
         if(lower!=NULL) lower->printStatisticsAll();
     }
-
+    void getStatisticsAll(std::vector<StorageStats>& stats_list){
+        stats_list.push_back(stats);
+        if(lower!=NULL) lower->getStatisticsAll(stats_list);
+    }
     const char *name;
     StorageStats stats;
     StorageLatency latency;
@@ -48,7 +51,7 @@ public:
 
 class Memory: public Storage{
 public:
-    Memory(int size = MEMSIZE, char* name_ = NULL);
+    Memory(int size = MEMSIZE, const char *name_ = NULL, bool trace_mode_ = false);
     addr64_t Translate(int vaddr);
     void HandleRequest(addr64_t vaddr, int nbytes, bool write,
                        char *data, int &time);
@@ -60,6 +63,7 @@ public:
     void printStatistics();
 
     char* memory;
+    bool trace_mode; // under trace test mode: DONT do real I/Os.
     ull memsize;
     ull offset;
 };

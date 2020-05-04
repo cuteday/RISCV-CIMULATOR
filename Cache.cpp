@@ -21,7 +21,7 @@ Cache *build_cache(vector<CacheConfig> &configs, Memory *memory){
     //     return memory;
     Cache *first = NULL, *last = NULL;
     for (int i = 0; i < configs.size();i++){
-        Cache *cur_layer = new Cache(configs[i]);
+        Cache *cur_layer = new Cache(configs[i], configs[i].name);
         if(first==NULL)
             first = cur_layer;
         else
@@ -33,7 +33,7 @@ Cache *build_cache(vector<CacheConfig> &configs, Memory *memory){
     return first;
 }
 
-Cache::Cache(CacheConfig config, char* name_){
+Cache::Cache(CacheConfig config, const char* name_){
     name = name_ == NULL ? "Cache" : name_;
     associativity = config.associativity;
     block_size = config.block_size;
@@ -77,7 +77,7 @@ CacheBlock* Cache::FindReplace(addr64_t addr, int& time){
     // policy dependent
     int set = getSet(addr);
     // 1. LRU
-    int min = 0x7fff, minChoice = 0;
+    int min = 0x7fffff, minChoice = 0;
     for (int i = 0; i < associativity; i++){
         CacheBlock *block = (*sets[set])[i];
         if(block->status == CACHEBLK_INVALID)
@@ -106,7 +106,7 @@ void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, in
     int set = getSet(vaddr);
     int offset = getOffset(vaddr);
     CacheBlock* target = FindBlock(vaddr);   // attempt to find it
-    DEBUG(DEBUG_V, "CacheManager: Access Request, tag 0x%llx, set 0x%x, offset 0x%x, length %d\n", tag, set, offset, nbytes);
+    // DEBUG(DEBUG_V, "CacheManager: Access Req, addr 0x%016llx, tag 0x%llx, set 0x%x, offset 0x%x, length %d\n", vaddr, tag, set, offset, nbytes);
     
     if(write)
         stats.num_writes++;
@@ -118,19 +118,21 @@ void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, in
         if (write && !write_allocate){
             lower->HandleRequest(vaddr, nbytes, write, data, time);
         }
-        // else, need to find a block for replacement:
-        target = FindReplace(vaddr, time);
-        // fetch from lower cache when...
-        // READ enable OR write allocate
-        lower->HandleRequest(vaddr & ~block_mask, (int)block_size, 0, target->dataptr, time);
-        target->status = CACHEBLK_VALID;
-        target->tag = tag;
-        // data transaction
-        if(!write)
-            memcpy(data, target->dataptr + offset, nbytes);
         else{
-            memcpy(target->dataptr + offset, data, nbytes);
-            target->status = CACHEBLK_DIRTY;
+            // else, need to find a block for replacement:
+            target = FindReplace(vaddr, time);
+            // fetch from lower cache when...
+            // READ enable OR write allocate
+            lower->HandleRequest(vaddr & ~block_mask, (int)block_size, 0, target->dataptr, time);
+            target->status = CACHEBLK_VALID;
+            target->tag = tag;
+            // data transaction
+            if(!write)
+                memcpy(data, target->dataptr + offset, nbytes);
+            else{
+                memcpy(target->dataptr + offset, data, nbytes);
+                target->status = CACHEBLK_DIRTY;
+            }
         }
     }else{      // hit
         // READ enable: 
@@ -146,8 +148,9 @@ void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, in
         else    // read 
             memcpy(data, target->dataptr + offset, (size_t)nbytes);
     }
-    time += timing;
-    target->last_access = ++time_stamp; // LRU
+    time += timing, stats.access_time += timing;
+    if(target)  
+        target->last_access = ++time_stamp;     // LRU
 }
 
 // Implement virtual funcs
@@ -157,7 +160,7 @@ void Cache::printStatistics(){
     fprintf(stdout, "Num Writes: %d\n", stats.num_writes);
     fprintf(stdout, "Num Hits: %d\n", stats.num_hits);
     fprintf(stdout, "Num Misses: %d\n", stats.num_misses);
-    fprintf(stdout, "Miss Rate: %.2f\n", (float)stats.num_misses / (stats.num_hits + stats.num_misses));
+    fprintf(stdout, "Miss Rate: %.5f\n", (float)stats.num_misses / (stats.num_hits + stats.num_misses));
 }
 
 void Cache::printParameters(){
@@ -181,8 +184,10 @@ CacheBlock::CacheBlock(size_t block_size) {
 }
 
 // __________________________________________ Default Configs ______________________________________________
-// Config Format: assoc, bsize, nsets, policy, WT, WA
-#define cfg_cache_nlayers  1
-CacheConfig cfg_cache_l1 = {8, 8, 8, LRU, false, true};
-CacheConfig cfg_cache_default_[] = {cfg_cache_l1};
+// Config Format: {assoc, bsize, nsets, policy, WT, WA, name[Optional]}
+#define cfg_cache_nlayers  2
+CacheConfig cfg_cache_default_[] = {
+    {4, 32, 32, LRU, false, true, "L1 Cache"},      // default L1
+    {8, 64, 64, LRU, false, true, "L2 Cache"},      // default L2
+};
 vector<CacheConfig> cfg_cache_default(cfg_cache_default_, cfg_cache_default_ + cfg_cache_nlayers);

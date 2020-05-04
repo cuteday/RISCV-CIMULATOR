@@ -25,16 +25,22 @@ C_FILES = ./main.cpp\
 		./Decode.cpp\
 		./Execute.cpp\
 		./Cache.cpp\
+		./CacheTraced.cpp\
 
 O_FILES = main.o Read_Elf.o Simulation.o Memory.o Utility.o Decode.o Execute.o Cache.o
 
 all: $(EXEC)
 	mkdir -p build
-	mv $(O_FILES) $(EXEC) ./build/
+	mv $(O_FILES) ./build/
+	make runtrace
 
 $(EXEC): $(O_FILES)
 	$(CC) $(CFLAGS) -o $(EXEC) $(O_FILES)
 	
+runtrace: CacheTraced.o Memory.o Utility.o Read_Elf.o Cache.o
+	$(CC) $(CFLAGS) -o runtrace $^
+	mkdir -p build
+	rm -f *.o
 
 main.o:	./Read_Elf.h \
 		$(H_COMMON)
@@ -66,12 +72,14 @@ Read_Elf.o: ./Read_Elf.h \
 
 Utility.o: $(H_COMMON)
 
-CacheTrace.o: ./Memory.h \
-			Cache.h\
+CacheTraced.o: ./Memory.h \
+			./Cache.h\
 			$(H_COMMON)
 
 .PHONY: clean
 clean: 
+	rm -f *.o
+	rm -f run runtrace
 	rm -rf build
 
 cache: Cache.o

@@ -1,6 +1,9 @@
 *.o
 run
+runtrace
 sort
 *.txt
 .DS_Store
 *.asm
+.vscode/settings.json
+*.csv

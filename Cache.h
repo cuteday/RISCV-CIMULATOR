@@ -16,6 +16,7 @@
 #include <cstring>
 #include "Memory.h"
 #define POWER2(x) (((x)&((x)-1))==0)
+#define GETMR(stats) ((double)stats.num_misses / (stats.num_hits + stats.num_misses))
 extern int log2(int x);
 
 enum POLICY{
@@ -36,6 +37,7 @@ typedef struct{
     POLICY policy;
     bool write_through;
     bool write_allocate;
+    const char *name;
 } CacheConfig;
 
 class CacheBlock{
@@ -64,7 +66,7 @@ private:
 
 class Cache: public Storage{
 public:
-    Cache(CacheConfig config, char* name_ = NULL);
+    Cache(CacheConfig config, const char* name_ = NULL);
 
     // inplementation of the virtual functions
     void HandleRequest(addr64_t vaddr, int bytes, bool write,
