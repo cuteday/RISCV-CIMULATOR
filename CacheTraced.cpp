@@ -3,25 +3,25 @@
 #include <fstream>
 using namespace std;
 /*
-    input formatt:
+    trace file input formatt:
     [read/write indicator] [space] [addr]
 */
 
-
 int cfg_access_size = 1; 
 // __________________________________________ Default Configs ______________________________________________
-// Config Format: assoc, bsize, nsets, policy, WT, WA
+// Config Format: assoc, bsize, nsets, policy, WT, WA, name[Optional], latency{hit, bus}
 #define cfg_cache_num_layers  1
-CacheConfig cfg_cache_L1 = {8, 128, 512, LRU, false, true, "Cache L1"};
-CacheConfig cfg_cache_[] = {cfg_cache_L1};
+CacheConfig cfg_cache_[] = {
+    {8, 128, 128, LRU, false, true, "L1 Cache", {1, 0}},      // default L1
+    {32, 256, 256, LRU, false, true, "L2 Cache", {8, 0}},      // default L2
+};
 vector<CacheConfig> cfg_cache(cfg_cache_, cfg_cache_ + cfg_cache_num_layers);
 
 vector<StorageStats> run_test(vector<CacheConfig> &cfg, const char *trace_file, bool hex_input){
     fprintf(stdout, "Start running test: %-15s, input: %s\n", trace_file, hex_input ? "hex" : "dec");
     Memory *memory = new Memory(MEMSIZE, "Memory", true);
     Cache *cache = build_cache(cfg, memory);
-    ifstream file;
-    file.open(trace_file);
+    ifstream file(trace_file);
     char type;
     int cycles = 0;
     ull addr;
@@ -51,6 +51,7 @@ void run_test_ex1();
 void run_test_ex1_1(const char *trace_file, const char *out_file);
 void run_test_ex1_2(const char *trace_file, const char *out_file);
 void run_test_ex1_3(const char *trace_file, const char *out_file);
+void run_test_ex3_1(const char *trace_file);
 
 int main(int argc, char *argv[]){
     char *trace_file = NULL;
@@ -68,6 +69,11 @@ int main(int argc, char *argv[]){
             debug_on[DEBUG_V] = true;
         if(!strcmp(argv[i], "-runt1")){
             run_test_ex1();
+            exit(0);
+        }
+        if(!strcmp(argv[i], "-runt3")){
+            run_test_ex3_1("./tests/trace/01-mcf-gem5-xcg.trace");
+            run_test_ex3_1("./tests/trace/02-stream-gem5-xaa.trace");
             exit(0);
         }
     }
@@ -136,11 +142,20 @@ void run_test_ex1_3(const char* trace_file, const char* out_file){
     ofile.close();
 }
 
+void run_test_ex3_1(const char* trace_file){
+    CacheConfig cfg_[] = {
+        {8, 64, 64, LRU, false, true, "L1 Cache", {3, 0}},          // default L1
+        {8, 64, 512, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
+        {8, 64, 16384, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
+    };
+    vector<CacheConfig> cfg(cfg_, cfg_ + 3);
+    vector<StorageStats> stats = run_test(cfg, trace_file, true);
+}
+
 void run_test_ex1(){
     POLICY policy = LRU;
     bool wthrough = false;
     bool wallocate = false;
-    Memory *memory = new Memory(MEMSIZE, "Memory" , true);
 
     run_test_ex1_1("./tests/trace/1.trace", "./ex1_1_csize_bsize_trace1.csv");
     run_test_ex1_1("./tests/trace/2.trace", "./ex1_1_csize_bsize_trace2.csv");
@@ -150,4 +165,5 @@ void run_test_ex1(){
 
     run_test_ex1_3("./tests/trace/1.trace", "./ex1_3_WA_WT_trace1.csv");
     run_test_ex1_3("./tests/trace/2.trace", "./ex1_3_WA_WT_trace2.csv");
+
 }

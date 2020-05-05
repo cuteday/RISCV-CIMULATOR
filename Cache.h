@@ -38,6 +38,7 @@ typedef struct{
     bool write_through;
     bool write_allocate;
     const char *name;
+    StorageLatency latency;
 } CacheConfig;
 
 class CacheBlock{
@@ -78,10 +79,9 @@ public:
     CacheBlock* FindBlock(addr64_t addr);       
 
     // algorithms
-    void PartitionAlgorithm();      // Partitioning
-    void PrefetchAlgorithm();
     int BypassDecision();           // Bypassing
     int PrefetchDecision();         // Prefetching
+    void PrefetchAlgorithm();
     
     // utility functions
     addr64_t getTag(addr64_t addr) { return (addr & tag_mask) >> (set_bits + block_bits); }

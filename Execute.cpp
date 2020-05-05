@@ -214,3 +214,18 @@ void Simulator::EX()
 
 	//.....
 }
+
+int Simulator::ExecuteTime(OP_NAME op){
+	switch (op){
+	case OP_MUL:
+	case OP_DIV:
+	case OP_REM:
+	case OP_MULH:
+		return 3;
+	case OP_MULW:
+		return 2;
+	default:
+		return 1;
+	}
+	return 0x7fffff;
+}

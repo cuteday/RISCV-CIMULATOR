@@ -49,9 +49,14 @@ public:
     Storage *lower; // multi-layer cache things (using polymorphism > < )
 };
 
+extern StorageLatency memoryLatencyDefault;
+
 class Memory: public Storage{
 public:
-    Memory(int size = MEMSIZE, const char *name_ = NULL, bool trace_mode_ = false);
+    Memory(int size = MEMSIZE, 
+        const char *name_ = NULL, 
+        bool trace_mode_ = false,
+        StorageLatency latency_ = memoryLatencyDefault);
     addr64_t Translate(int vaddr);
     void HandleRequest(addr64_t vaddr, int nbytes, bool write,
                        char *data, int &time);

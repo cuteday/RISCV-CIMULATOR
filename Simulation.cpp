@@ -17,24 +17,6 @@ Simulator::Simulator(char* filename, bool enable_cache_){
 		storage = mainMemory;
 }
 
-int Simulator::ExecuteTime(OP_NAME op){
-	int cycles;
-	switch (op){
-	case OP_MUL:
-	case OP_DIV:
-	case OP_REM:
-	case OP_MULH:
-		cycles = 3;
-		break;
-	case OP_MULW:
-		cycles = 2;
-		break;
-	default:
-		cycles = 1;
-	}
-	return cycles;
-}
-
 void Simulator::stall(STAGE_NAME stage){
 	assert(0 <= stage && stage < NUM_STAGES);
 	if(state[stage]!=REG_BUBBLE)
@@ -125,7 +107,7 @@ void Simulator::IF(){
 
 	DEBUG(DEBUG_P, "IF :\tFetching instruction at PC 0x%08x\n", PC);
 
-	storage->Read(PC, 4, &IFID_.inst, cycles);
+	storage->Read(PC, 4, &IFID_.inst, logger->numCycles);
 
 	IFID_.PC = PC; // 前传更新前的PC
 	PC += 4;
@@ -144,11 +126,11 @@ void Simulator::MEM(){
 
 	if(ReadLen){
 		DEBUG(DEBUG_P, "MEM:\tReading %d byte at vaddr 0x%08x\n", ReadLen, ALU_out);
-			storage->Read(ALU_out, ReadLen, &Mem_read, cycles, true);
+			storage->Read(ALU_out, ReadLen, &Mem_read, logger->numCycles, true);
 	}
 	if(WriteLen){
 		DEBUG(DEBUG_P, "MEM:\tWriting %d byte at vaddr 0x%08x, value 0x%-8x\n", WriteLen, ALU_out, Reg_Rt);
-			storage->Write(ALU_out, WriteLen, Reg_Rt, cycles);
+			storage->Write(ALU_out, WriteLen, Reg_Rt, logger->numCycles);
 
 	}
 	//write MEMWB_

@@ -1,5 +1,8 @@
 #include "Memory.h"
 
+// default hit latency: 100 cycles
+StorageLatency memoryLatencyDefault = {50, 0};
+
 // _________________________________________________________________________
 // Simulator <-> (First Layer)Storage interface warpper
 void Storage::Read(addr64_t addr, int nbytes, ull *data, int &time, bool sign_ext){
@@ -41,10 +44,11 @@ void Storage::Write(addr64_t addr, int nbytes, ull data, int &time){
     }
 }
 
-Memory::Memory(int size, const char *name_, bool trace_mode_):memsize(size){
+Memory::Memory(int size, const char *name_, bool trace_mode_,  StorageLatency latency_):memsize(size){
     memory = new char[size];
     name = name_ == NULL ? "Memory" : name_;
     trace_mode = trace_mode_;
+    latency = latency_;
     lower = NULL;
     offset = 0;
     memset(memory, 0, size);
@@ -65,12 +69,10 @@ void Memory::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, i
     else stats.num_reads++;
     if(trace_mode) return; // 使用trace 不作实际读写 (地址空间太大了额)
 
-    if (write){
+    if (write)
         memcpy(memory + addr, data, nbytes);
-    }
-    else{
+    else
         memcpy(data, memory + addr, nbytes);
-    }
     // DEBUG(DEBUG_V, "MemoryManager: Directly accessing -> vaddr 0x%x, write: %d, size: %d, value: %llx\n", vaddr, write, nbytes, *(ll*)data);
 }
 

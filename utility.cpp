@@ -18,7 +18,7 @@ void Logger::printResults(){
     fprintf(stdout, "-------------------Simulator History--------------------\n");
     fprintf(stdout, "Total instructions: %d\n", numInsts);
     fprintf(stdout, "Total CPU cycles: %d\n", numCycles);
-    fprintf(stdout, "Average CPI: %.1f\n", (float)numCycles / numInsts);
+    fprintf(stdout, "Average CPI: %.3f\n", (float)numCycles / numInsts);
     fprintf(stdout, "Control harzards happened: %d\n", numControlHazards);
     fprintf(stdout, "Data harzards happended: %d, among which:\n", numDataHarzards);
     fprintf(stdout, "%d used Data Bypass to avoid stalling, but...\n", numDataForwards);

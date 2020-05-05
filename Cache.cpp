@@ -42,6 +42,7 @@ Cache::Cache(CacheConfig config, const char* name_){
     write_through = config.write_through;
     write_allocate = config.write_allocate;
     cache_size = associativity * block_size * num_sets;
+    latency = config.latency;
 
     assert(associativity > 0);
     assert(block_size >= 8 && POWER2(block_size));    // ignored lower bits
@@ -184,10 +185,11 @@ CacheBlock::CacheBlock(size_t block_size) {
 }
 
 // __________________________________________ Default Configs ______________________________________________
-// Config Format: {assoc, bsize, nsets, policy, WT, WA, name[Optional]}
-#define cfg_cache_nlayers  2
+// Config Format: {assoc, bsize, nsets, policy, WT, WA, name[Optional], latency{hit, bus}} 
+#define cfg_cache_nlayers  3
 CacheConfig cfg_cache_default_[] = {
-    {4, 32, 32, LRU, false, true, "L1 Cache"},      // default L1
-    {8, 64, 64, LRU, false, true, "L2 Cache"},      // default L2
+    {8, 64, 64, LRU, false, true, "L1 Cache", {1, 0}},          // default L1
+    {8, 64, 512, LRU, false, true, "L2 Cache", {8, 0}},         // default L2
+    {8, 64, 16384, LRU, false, true, "L3 Cache", {8, 0}},       // default L3
 };
 vector<CacheConfig> cfg_cache_default(cfg_cache_default_, cfg_cache_default_ + cfg_cache_nlayers);
