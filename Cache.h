@@ -31,6 +31,13 @@ enum CACHEBLK_STATUS{
 };
 
 typedef struct{
+    bool enable;
+    int depth;
+    int stride;
+    bool LIP;
+} PrefetchConfig;
+
+typedef struct{
     int associativity;
     size_t block_size;
     int num_sets;
@@ -39,6 +46,8 @@ typedef struct{
     bool write_allocate;
     const char *name;
     StorageLatency latency;
+    PrefetchConfig prefetch;
+
 } CacheConfig;
 
 class CacheBlock{
@@ -79,9 +88,8 @@ public:
     CacheBlock* FindBlock(addr64_t addr);       
 
     // algorithms
-    int BypassDecision();           // Bypassing
-    int PrefetchDecision();         // Prefetching
-    void PrefetchAlgorithm();
+    int BypassDecision();         
+    void PrefetchAlgorithm(addr64_t addr, bool write, bool hit, int& time);
     
     // utility functions
     addr64_t getTag(addr64_t addr) { return (addr & tag_mask) >> (set_bits + block_bits); }
@@ -99,6 +107,7 @@ public:
     int time_stamp;     // LRU
     bool write_through;
     bool write_allocate;
+    PrefetchConfig prefetch;    // 
 
     // mask things
     int block_bits;     // how much bits intra-block takes
@@ -107,6 +116,9 @@ public:
     addr64_t block_mask;
     addr64_t set_mask;
     addr64_t tag_mask;
+
+    // cache status
+    bool force_read;
 };
 
 // Build CacheManager in a linked-list form

@@ -9,13 +9,13 @@ using namespace std;
 
 int cfg_access_size = 1; 
 // __________________________________________ Default Configs ______________________________________________
-// Config Format: assoc, bsize, nsets, policy, WT, WA, name[Optional], latency{hit, bus}
-#define cfg_cache_num_layers  1
-CacheConfig cfg_cache_[] = {
-    {8, 128, 128, LRU, false, true, "L1 Cache", {1, 0}},      // default L1
-    {32, 256, 256, LRU, false, true, "L2 Cache", {8, 0}},      // default L2
-};
-vector<CacheConfig> cfg_cache(cfg_cache_, cfg_cache_ + cfg_cache_num_layers);
+// Config Format: {assoc, bsize, nsets, policy, WT, WA, name[Optional], latency{hit, bus}[optional], prefetchconfig{enable, dep, stride}[optional]} 
+// #define cfg_cache_num_layers  2
+// CacheConfig cfg_cache_[] = {
+//     {8, 128, 128, LRU, false, true, "L1 Cache", {1, 0}},      // default L1
+//     {32, 256, 256, LRU, false, true, "L2 Cache", {8, 0}},      // default L2
+// };
+// vector<CacheConfig> cfg_cache(cfg_cache_, cfg_cache_ + cfg_cache_num_layers);
 
 vector<StorageStats> run_test(vector<CacheConfig> &cfg, const char *trace_file, bool hex_input){
     fprintf(stdout, "Start running test: %-15s, input: %s\n", trace_file, hex_input ? "hex" : "dec");
@@ -51,7 +51,8 @@ void run_test_ex1();
 void run_test_ex1_1(const char *trace_file, const char *out_file);
 void run_test_ex1_2(const char *trace_file, const char *out_file);
 void run_test_ex1_3(const char *trace_file, const char *out_file);
-void run_test_ex3_1(const char *trace_file);
+void run_test_ex3_1();
+void run_test_ex3_2();
 
 int main(int argc, char *argv[]){
     char *trace_file = NULL;
@@ -71,14 +72,17 @@ int main(int argc, char *argv[]){
             run_test_ex1();
             exit(0);
         }
-        if(!strcmp(argv[i], "-runt3")){
-            run_test_ex3_1("./tests/trace/01-mcf-gem5-xcg.trace");
-            run_test_ex3_1("./tests/trace/02-stream-gem5-xaa.trace");
+        if(!strcmp(argv[i], "-runt3_1")){
+            run_test_ex3_1();
+            exit(0);
+        }
+        if(!strcmp(argv[i], "-runt3_2")){
+            run_test_ex3_2();
             exit(0);
         }
     }
     if(trace_file)
-        run_test(cfg_cache, trace_file, hex_input);
+        run_test(cfg_cache_default, trace_file, hex_input);
     return 0;
 }
 
@@ -142,14 +146,28 @@ void run_test_ex1_3(const char* trace_file, const char* out_file){
     ofile.close();
 }
 
-void run_test_ex3_1(const char* trace_file){
+void run_test_ex3_1(){
     CacheConfig cfg_[] = {
         {8, 64, 64, LRU, false, true, "L1 Cache", {3, 0}},          // default L1
         {8, 64, 512, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
         {8, 64, 16384, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
     };
     vector<CacheConfig> cfg(cfg_, cfg_ + 3);
-    vector<StorageStats> stats = run_test(cfg, trace_file, true);
+    vector<StorageStats> stats;
+    stats = run_test(cfg, "./tests/trace/01-mcf-gem5-xcg.trace", true);
+    stats = run_test(cfg, "./tests/trace/02-stream-gem5-xaa.trace", true);
+}
+
+void run_test_ex3_2(){
+    CacheConfig cfg_[] = {
+        {8, 64, 64, LRU, false, true, "L1 Cache", {3, 0}, {true, 1, 1}},          // default L1
+        {8, 64, 512, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
+        {8, 64, 16384, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
+    };
+    vector<CacheConfig> cfg(cfg_, cfg_ + 3);
+    vector<StorageStats> stats;
+    stats = run_test(cfg, "./tests/trace/01-mcf-gem5-xcg.trace", true);
+    stats = run_test(cfg, "./tests/trace/02-stream-gem5-xaa.trace", true);
 }
 
 void run_test_ex1(){

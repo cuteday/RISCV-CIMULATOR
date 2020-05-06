@@ -69,9 +69,10 @@ void ArgParser::printHelp(){
     printf("Usage: \n");
     printf("    -f [risc-v64 file]: run executable in simulator\n");
     printf("Optional: \n");
-    printf("    -d run in single-step mode for debugging\n");
-    printf("    -v print debug imformation for simulator (verbose)\n");
-    printf("    -e print elf file parsing results before running\n");
+    printf("    -d      run in single-step mode for debugging\n");
+    printf("    -v      print debug imformation for simulator (verbose)\n");
+    printf("    -e      print elf file parsing results before running\n");
+    printf("    -cache  enable cache\n");
     printf("Help: \n");
     printf("    -h help information\n\n");
     exit(0);

@@ -6,6 +6,8 @@ using namespace std;
 // 访存:
 // 不命中 -> loadFromLower
 
+#define LIP
+
 int log2(int x){
     assert(POWER2(x));
     int res = -1;
@@ -43,6 +45,7 @@ Cache::Cache(CacheConfig config, const char* name_){
     write_allocate = config.write_allocate;
     cache_size = associativity * block_size * num_sets;
     latency = config.latency;
+    prefetch = config.prefetch;
 
     assert(associativity > 0);
     assert(block_size >= 8 && POWER2(block_size));    // ignored lower bits
@@ -81,9 +84,9 @@ CacheBlock* Cache::FindReplace(addr64_t addr, int& time){
     int min = 0x7fffff, minChoice = 0;
     for (int i = 0; i < associativity; i++){
         CacheBlock *block = (*sets[set])[i];
-        if(block->status == CACHEBLK_INVALID)
+        if(block->status == CACHEBLK_INVALID || block->tag == getTag(addr))
             return block;
-        if(block->last_access < min){
+        if (block->last_access < min){
             min = block->last_access, minChoice = i;
         }
     }
@@ -98,12 +101,12 @@ CacheBlock* Cache::FindReplace(addr64_t addr, int& time){
     return replace;
 }
 
-
 void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, int &time){
     assert(POWER2(nbytes));
 
     addr64_t tag = getTag(vaddr);
-    int timing = 0;         // time used in this layer
+    bool hit = false;
+    int timing = 0; // time used in this layer
     int set = getSet(vaddr);
     int offset = getOffset(vaddr);
     CacheBlock* target = FindBlock(vaddr);   // attempt to find it
@@ -114,7 +117,6 @@ void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, in
     else stats.num_reads++;
 
     if(target == NULL){     // miss
-        stats.num_misses++;
         timing += latency.bus_latency;   // and lower layer hit latency...
         if (write && !write_allocate){
             lower->HandleRequest(vaddr, nbytes, write, data, time);
@@ -136,22 +138,44 @@ void Cache::HandleRequest(addr64_t vaddr, int nbytes, bool write, char *data, in
             }
         }
     }else{      // hit
-        // READ enable: 
-        // just cpy data and return
-        stats.num_hits++;
+        hit = true;
         timing += latency.bus_latency + latency.hit_latency;
         if(write){
             memcpy(target->dataptr + offset, data, nbytes);
-            if(write_through)   // write through: change cache and lower layer cache... until memory
+            if(write_through)   // write through: change cache and lower layer cache... 
                 lower->HandleRequest(vaddr, nbytes, write, data, time);
             else target->status = CACHEBLK_DIRTY;
         }
-        else    // read 
+        else    // read
             memcpy(data, target->dataptr + offset, (size_t)nbytes);
     }
+    if(hit)
+        stats.num_hits++;
+    else stats.num_misses++;
+    PrefetchAlgorithm(vaddr, write, hit, time);
     time += timing, stats.access_time += timing;
+#ifdef LIP
+    if(hit) // LIP, Qureshi et al.  Adaptive Insertion Policies for High Performance Caching
+        target->last_access = ++time_stamp;     
+#else 
     if(target)  
         target->last_access = ++time_stamp;     // LRU
+#endif
+}
+
+void Cache::PrefetchAlgorithm(addr64_t addr, bool write, bool hit, int& time){
+    if(!prefetch.enable || hit) return;   // dont prefetch on these situations...
+    addr &= ~block_mask;    // align with a block
+    for (int k = 1; k <= prefetch.depth; k++){
+        addr64_t fetch_addr = addr + k * prefetch.stride * block_size;
+        addr64_t tag = getTag(fetch_addr);
+        CacheBlock *replace = FindReplace(fetch_addr, time);
+        if(replace->tag != tag){
+            lower->HandleRequest(addr, block_size, 0, replace->dataptr, time);
+            replace->status = CACHEBLK_VALID;
+            replace->tag = tag;
+        }
+    }
 }
 
 // Implement virtual funcs
@@ -185,7 +209,12 @@ CacheBlock::CacheBlock(size_t block_size) {
 }
 
 // __________________________________________ Default Configs ______________________________________________
-// Config Format: {assoc, bsize, nsets, policy, WT, WA, name[Optional], latency{hit, bus}} 
+// Config Format: 
+// {assoc, bsize, nsets, policy, WT, WA, 
+// name[Optional], 
+// latency{hit, bus}[optional],                     default: 0
+// prefetchconfig{enable, dep, stride}[optional]    default: disabled
+// } 
 #define cfg_cache_nlayers  3
 CacheConfig cfg_cache_default_[] = {
     {8, 64, 64, LRU, false, true, "L1 Cache", {1, 0}},          // default L1

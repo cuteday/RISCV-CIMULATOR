@@ -31,7 +31,7 @@ public:
     void Read(addr64_t addr, int nbytes, ull *data, int &time, bool sign_ext = true);
     void Write(addr64_t addr, int nbytes, ull data, int &time);
     // Intra-Storage Interface (using Abstract Functions > <)
-    virtual void HandleRequest(addr64_t addr, int nbytes, bool write,
+    virtual void HandleRequest(addr64_t vaddr, int nbytes, bool write,
                                 char *data, int &time) = 0;
     virtual void printStatistics() = 0;
     virtual void printParameters() = 0;
