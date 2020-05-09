@@ -1,11 +1,5 @@
 #include "Simulation.h"
 
-// quick notes for stall:
-// stall 应该是再按原样执行一遍
-// 即不要更新这个阶段的流水线寄存器
-// 但可以更新下一个阶段的流水线寄存器
-
-// ID:INVADED 异度入侵!!
 // 译码
 void Simulator::ID()
 {

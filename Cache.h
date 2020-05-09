@@ -1,17 +1,3 @@
-// 联调：
-// Execution Driven: 直接在执行中调用
-// Trace Driven:  模拟器存储I/D trace
-// 取指 访问I-cache
-// 访写存 D-cache
-
-// libcheetah
-// simple scalar
-// Hit Time: 使用cacti模型估值 size association 
-
-// Cache设计模式：
-// Exclusive 
-// Strictly Inclusive [本模拟器采用的]
-// Third One (不要求Ex或Inc)
 #include <cassert>
 #include <cstring>
 #include "Memory.h"

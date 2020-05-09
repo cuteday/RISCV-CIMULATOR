@@ -1,20 +1,32 @@
 # RISCV-CIMULATOR
-C++ Implementation of a simple risc-v simulator.
+C++ Implementation of a simple risc-v simulator.\
+This is the homework for Practicum of Computer Organization and Architecture, Peking Univ.
 
 ## Usage
 ~~~
     make
-    cd build
-    ./run [args]
+    ./run       [args]
+    ./runtrace  [args]
 ~~~
 
 ## Arguments
-~~~
--f [risc-v64 file]: run executable in simulator
--d: print debug impormation for simulator
--e: print elf file parsing results
--cache: enable cache
 
--h: help information
-
+### RISC-V Simulator
+Use compiled excutable `run`
 ~~~
+-f      [risc-v64 file]: run executable in simulator
+-d:     print debug impormation for simulator (verbose)
+-e:     print elf file parsing results
+-cache: enable cache simulation
+-h:     print help information
+~~~
+Example: `./run -cache -f ./tests/self_tests/ackerman.riscv`
+### Cache Simulator (Trace file input needed)
+Use compiled excutable `runtrace`\
+Edit default configuration in `Cache.cpp`
+~~~
+-f      [trace file]: run executable in simulator
+-hex:   Indicates the addresses is in hexadecimal
+-v:     print debug impormation for cache (verbose)
+~~~
+Example: `./runtrace -f ./tests/trace/02-stream-gem5-xaa.trace -hex`

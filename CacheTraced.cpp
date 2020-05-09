@@ -158,12 +158,32 @@ void run_test_ex3_1(){
     stats = run_test(cfg, "./tests/trace/02-stream-gem5-xaa.trace", true);
 }
 
+#define OPT_CONFIG
 void run_test_ex3_2(){
+#ifdef OPT_CONFIG
+    // CacheConfig cfg_[] = {
+    //     {8, 64, 64, LRU, false, true, "L1 Cache", {3, 0}},          // default L1
+    //     {8, 64, 512, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
+    //     {8, 64, 16384, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
+    // };      // default 20 39, 11 75
+    // CacheConfig cfg_[] = {
+    //     {4, 128, 64, LRU, false, true, "L1 Cache", {3, 0}},          // default L1
+    //     {4, 128, 512, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
+    //     {4, 128, 16384, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
+    // };      // 17 35, 05 75
+    CacheConfig cfg_[] = {
+        {8, 128, 32, LRU, false, true, "L1 Cache", {3, 0}},          // default L1
+        {8, 128, 256, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
+        {8, 128, 8192, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
+    };  // 17 35, 05 75
+
+#else   // default configs
     CacheConfig cfg_[] = {
         {8, 64, 64, LRU, false, true, "L1 Cache", {3, 0}, {true, 1, 1}},          // default L1
         {8, 64, 512, LRU, false, true, "L2 Cache", {4, 0}},         // default L2
         {8, 64, 16384, LRU, false, true, "L3 Cache", {10, 0}},      // default L3
     };
+#endif 
     vector<CacheConfig> cfg(cfg_, cfg_ + 3);
     vector<StorageStats> stats;
     stats = run_test(cfg, "./tests/trace/01-mcf-gem5-xcg.trace", true);

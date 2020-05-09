@@ -1,12 +1,6 @@
 #include "Cache.h"
 using namespace std;
-// 写存:
-// 命中 -> 写回 / 直接写到下层
-// 不命中 -> 写分配loadFromLower, 写不分配直接写到下层(一般下层也是写不分配)
-// 访存:
-// 不命中 -> loadFromLower
-
-#define LIP
+// #define LIP
 
 int log2(int x){
     assert(POWER2(x));

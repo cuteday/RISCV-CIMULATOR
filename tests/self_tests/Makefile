@@ -23,7 +23,6 @@ all: $(OBJS) $(REFS)
 clean:
 	rm *.riscv *.asm
 
-# 学习时间到！灯花小课堂开课啦
 # 关于gcc -march参数 其指定的是目标机器ISA
 # 常用的就是RV32I和RV64I
 # 扩展指令集需要在后面加扩展类型：
