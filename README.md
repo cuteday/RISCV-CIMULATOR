@@ -12,7 +12,7 @@ This is the homework for Practicum of Computer Organization and Architecture, Pe
 ## Arguments
 
 ### RISC-V Simulator
-Use compiled excutable `run`
+Use compiled executable `run`
 ~~~
 -f      [risc-v64 file]: run executable in simulator
 -d:     print debug impormation for simulator (verbose)
@@ -22,7 +22,7 @@ Use compiled excutable `run`
 ~~~
 Example: `./run -cache -f ./tests/self_tests/ackerman.riscv`
 ### Cache Simulator (Trace file input needed)
-Use compiled excutable `runtrace`\
+Use compiled executable `runtrace`\
 Edit default configuration in `Cache.cpp`
 ~~~
 -f      [trace file]: run executable in simulator
