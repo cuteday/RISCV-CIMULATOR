@@ -1,6 +1,6 @@
 # RISCV-CIMULATOR
 C++ Implementation of a simple risc-v simulator.\
-This is the homework for Practicum of Computer Organization and Architecture 2020 Spring, Peking Univ.\
+This is the homework for Practicum of Computer Organization and Architecture 2020 Spring, Peking Univ.
 
 ## Usage
 ~~~
